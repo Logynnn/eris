@@ -5,6 +5,8 @@ import logging
 import discord
 from discord.ext import commands
 
+from utils.context import Context
+
 
 # TODO: Adicionar uma documentação decente.
 
@@ -40,3 +42,13 @@ class Bellatrix(commands.Bot):
                 self.logger.info(f'Extension \'{ext}\' has been loaded.')
 
         print(f'Online com {len(self.users)} usuários')
+
+    async def process_commands(self, message: discord.Message):
+        if message.author.bot:
+            return
+
+        if not message.guild:
+            return
+
+        ctx = await self.get_context(message, cls=Context)
+        await self.invoke(ctx)
