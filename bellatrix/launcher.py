@@ -1,5 +1,6 @@
 import contextlib
 import logging
+from pathlib import Path
 
 import config
 from bot import Bellatrix
@@ -19,6 +20,11 @@ class RemoveNoise(logging.Filter):
 
 @contextlib.contextmanager
 def setup_logging():
+    # Criar a past logs/ antes de inicializar o logger.
+    path = Path('logs')
+    if not path.exists():
+        path.mkdir(parents=True, exist_ok=True)
+
     try:
         # __enter__
         logging.getLogger('discord').setLevel(logging.INFO)
