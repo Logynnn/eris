@@ -32,7 +32,7 @@ class Bellatrix(commands.Bot):
         self.logger = logging.getLogger('bellatrix')
         
     async def on_ready(self):
-        for ext in self.all_extensions:
+        for ext in all_extensions:
             try:
                 self.load_extension(ext)
             except Exception as e:
