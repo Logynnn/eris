@@ -1,6 +1,9 @@
+import asyncio
 import typing
 import inspect
 import json
+import click
+import traceback
 from collections import OrderedDict
 
 import asyncpg
@@ -8,6 +11,38 @@ import asyncpg
 
 class SchemaError(Exception):
     pass
+
+class DatabaseManager:
+    def __init__(self, pool: asyncpg.pool.Pool):
+        self._pool = pool
+
+    async def initialize(self):
+        for table in Table.all_tables():
+            try:
+                await table.create(self._pool, verbose=True)
+            except Exception:
+                click.echo(f'Could not create table {table.__table_name__}\n{traceback.format_exc()}', err=True)
+            else:
+                click.echo(f'[{table.__module__}] Created table \'{table.__table_name__}\'')
+
+    @classmethod
+    async def from_dsn(cls, uri: str, *, loop: asyncio.AbstractEventLoop=None):
+        loop = loop or asyncio.get_event_loop()
+        pool = await cls.create_pool(uri, loop=loop)
+        return cls(pool)
+
+    @classmethod
+    async def create_pool(cls, uri: str, *, loop: asyncio.AbstractEventLoop):
+        def _encode_jsonb(value):
+            return json.dumps(value)
+
+        def _decode_jsonb(value):
+            return json.loads(value)
+
+        async def init(conn: asyncpg.Connection):
+            await conn.set_type_codec('jsonb', schema='pg_catalog', encoder=_encode_jsonb, decoder=_decode_jsonb)
+
+        return await asyncpg.create_pool(uri, init=init, loop=loop)
 
 class SQLType:
     python: typing.Any = None
@@ -29,7 +64,7 @@ class Column:
 
     def __init__(self, column_type: SQLType, *, index: bool=False, primary_key: bool=False,
                  nullable: bool=False, unique: bool=False, default: typing.Any=None, name: str=None):
-        
+
         if inspect.isclass(column_type):
             column_type = column_type()
 
@@ -83,14 +118,16 @@ class TableMeta(type):
         dct['__table_name__'] = table_name
 
         for elem, value in dct.items():
-            if isinstance(value, Column):
-                if value.name is None:
-                    value.name = elem
+            if not isinstance(value, Column):
+                continue
 
-                if value.index:
-                    value.index_name = '%s_%s_idx' % (table_name, value.name)
+            if value.name is None:
+                value.name = elem
 
-                columns.append(value)
+            if value.index:
+                value.index_name = '%s_%s_idx' % (table_name, value.name)
+            
+            columns.append(value)
 
         dct['columns'] = columns
         return super().__new__(cls, name, parents, dct)
@@ -100,21 +137,7 @@ class TableMeta(type):
 
 class Table(metaclass=TableMeta):
     @classmethod
-    async def create_pool(cls, uri: str, **kwargs):
-        '''Configura e retorna uma pool do PostgreSQL.'''
-        def _encode_jsonb(value):
-            return json.dumps(value)
-
-        def _decode_jsonb(value):
-            return json.loads(value)
-
-        async def init(conn: asyncpg.Connection):
-            await conn.set_type_codec('jsonb', schema='pg_catalog', encoder=_encode_jsonb, decoder=_decode_jsonb)
-
-        return await asyncpg.create_pool(uri, init=init, **kwargs)
-
-    @classmethod
-    async def create(cls, pool: asyncpg.pool.Pool, *, verbose: bool=False) -> typing.Optional[bool]:
+    async def create(cls, pool: asyncpg.pool.Pool, *, verbose: bool=False):
         '''Cria o banco de dados.'''
         sql = cls.create_table(exists_ok=True)
         if verbose:

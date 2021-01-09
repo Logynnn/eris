@@ -9,7 +9,7 @@ import click
 
 import config
 from bot import Bellatrix, all_extensions
-from utils.database import Table
+from utils.database import DatabaseManager
 
 
 # TODO: Adicionar uma documentação decente.
@@ -79,7 +79,7 @@ def init(quiet: bool):
     run = loop.run_until_complete
 
     try:
-        pool = run(Table.create_pool(config.postgres, loop=loop))
+        manager = run(DatabaseManager.from_dsn(config.postgres, loop=loop))
     except Exception:
         return click.echo(f'Could not create PostgreSQL connection pool\n{traceback.format_exc()}', err=True)
 
@@ -89,13 +89,7 @@ def init(quiet: bool):
         except Exception:
             return click.echo(f'Could not load {ext}\n{traceback.format_exc()}', err=True)
 
-    for table in Table.all_tables():
-        try:
-            created = run(table.create(pool, verbose=not quiet))
-        except Exception:
-            click.echo(f'Could not create table {table.__table_name__}\n{traceback.format_exc()}', err=True)
-        else:
-            click.echo(f'[{table.__module__}] Criado a tabela \'{table.__table_name__}\'')
+    run(manager.initialize())
 
 if __name__ == '__main__':
     main()
