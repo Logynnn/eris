@@ -10,6 +10,7 @@ from utils import database
 
 # TODO: Adicionar uma documentação decente.
 
+THRESHOLD = 4
 STARBOARD_CHANNEL_ID = 797633732340219964
 
 class StarError(commands.CheckFailure):
@@ -132,7 +133,7 @@ class Starboard(commands.Cog):
         record = await self.bot.manager.fetch_row(query, entry_id)
 
         count = record[0]
-        if count < 1:
+        if count < THRESHOLD:
             return
 
         content, embed = self.get_content(message, count)
