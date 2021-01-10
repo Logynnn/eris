@@ -60,6 +60,9 @@ class SQLType:
     def to_sql(self) -> str:
         raise NotImplementedError()
 
+    def is_real_type(self) -> bool:
+        return True
+
 class String(SQLType):
     python = str
 
