@@ -57,6 +57,9 @@ def setup_logging():
 
 def run_bot():
     bot = Bellatrix()
+    run = bot.loop.run_until_complete
+
+    bot.manager = run(DatabaseManager.from_dsn(config.postgres, loop=bot.loop))
     bot.run(config.token)
 
 @click.group(invoke_without_command=True, options_metavar='[options]')
