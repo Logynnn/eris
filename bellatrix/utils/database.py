@@ -169,7 +169,7 @@ class Table(metaclass=TableMeta):
             column_creations.append('PRIMARY KEY (%s)' % ', '.join(primary_keys))
             
         builder.append('(%s)' % ', '.join(column_creations))
-        statements.append(' '.join(builder))
+        statements.append(' '.join(builder) + ';')
 
         for column in cls.columns:
             if column.index:
