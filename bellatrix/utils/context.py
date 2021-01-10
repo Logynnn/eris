@@ -10,6 +10,6 @@ class Context(commands.Context):
         color = self.guild.me.color
         return Embed(description=content, author=author, color=color)
 
-    async def send(self, content: str):
+    async def reply(self, content: str):
         '''Este método foi sobrescrito para enviar ``Embed`` automaticamente.'''
-        await super().send(embed=self.get_embed(content))
+        await super().reply(embed=self.get_embed(content))
