@@ -25,6 +25,16 @@ class DatabaseManager:
             else:
                 click.echo(f'[{table.__module__}] Created table \'{table.__table_name__}\'')
 
+    async def execute(self, query: str, *args, **kwargs):
+        return await self._pool.execute(query, *args, **kwargs)
+
+    async def fetch(self, query: str, *args, **kwargs):
+        return await self._pool.fetch(query, *args, **kwargs)
+
+    async def fetch_row(self, query: str, *args, **kwargs):
+        return await self._pool.fetchrow(query, *args, **kwargs)
+
+
     @classmethod
     async def from_dsn(cls, uri: str, *, loop: asyncio.AbstractEventLoop=None):
         loop = loop or asyncio.get_event_loop()
