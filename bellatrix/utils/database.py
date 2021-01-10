@@ -56,6 +56,87 @@ class String(SQLType):
     def to_sql(self):
         return 'TEXT'
 
+class Integer(SQLType):
+    python = int
+
+    def __init__(self, *, big: bool=False, small: bool=False, auto_increment: bool=False):
+        self.big = big
+        self.small = small
+        self.auto_increment = auto_increment
+
+        if big and small:
+            raise SchemaError('Integer column type cannot be both big and small')
+
+    def is_real_type(self):
+        return not self.auto_increment
+
+    def to_sql(self):
+        if self.auto_increment:
+            if self.big:
+                return 'BIGSERIAL'
+            if self.small:
+                return 'SMALLSERIAL'
+            return 'SERIAL'
+        
+        if self.big:
+            return 'BIGINT'
+
+        if self.small:
+            return 'SMALLINT'
+
+        return 'INTEGER'
+
+class ForeignKey(SQLType):
+    def __init__(self, table: str, column: str, *, sql_type: SQLType=None,
+                 on_delete: str='CASCADE', on_update: str='NO ACTION'):
+
+        if not table or not isinstance(table, str):
+            raise SchemaError('missing table to reference (must be string)')
+
+        valid_actions = (
+            'NO ACTION',
+            'RESTRICT',
+            'CASCADE',
+            'SET NULL',
+            'SET DEFAULT',
+        )
+
+        on_delete = on_delete.upper()
+        on_update = on_update.upper()
+
+        if on_delete not in valid_actions:
+            raise TypeError('on_delete must be one of %s.' % valid_actions)
+
+        if on_update not in valid_actions:
+            raise TypeError('on_update must be one of %s.' % valid_actions)
+
+        self.table = table
+        self.column = column
+        self.on_update = on_update
+        self.on_delete = on_delete
+
+        if sql_type is None:
+            sql_type = Integer
+
+        if inspect.isclass(sql_type):
+            sql_type = sql_type()
+
+        if not isinstance(sql_type, SQLType):
+            raise TypeError('Cannot have non-SQLType derived sql_type')
+
+        if not sql_type.is_real_type():
+            raise SchemaError('sql_type must be a "real" type')
+
+        self.sql_type = sql_type.to_sql()
+
+    def is_real_type(self):
+        return False
+
+    def to_sql(self):
+        fmt = '{0.sql_type} REFERENCES {0.table} ({0.column})' \
+              ' ON DELETE {0.on_delete} ON UPDATE {0.on_update}'
+        return fmt.format(self)
+
 class Column:
     __slots__ = (
         'column_type', 'index', 'primary_key', 'nullable',
@@ -105,6 +186,10 @@ class Column:
             builder.append('NOT NULL')
 
         return ' '.join(builder)
+
+class PrimaryKeyColumn(Column):
+    def __init__(self):
+        super().__init__(Integer(auto_increment=True), primary_key=True)
 
 class TableMeta(type):
     @classmethod
