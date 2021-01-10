@@ -10,6 +10,8 @@ from utils.context import Context
 
 # TODO: Adicionar uma documentação decente.
 
+COSMIC_GUILD_ID = 795017809402921041
+
 all_extensions = []
 for root, _, files in os.walk('extensions'):
     for file in files:
@@ -32,6 +34,8 @@ class Bellatrix(commands.Bot):
         self.logger = logging.getLogger('bellatrix')
         
     async def on_ready(self):
+        self.cosmic = self.get_guild(COSMIC_GUILD_ID)
+
         for ext in all_extensions:
             try:
                 self.load_extension(ext)
