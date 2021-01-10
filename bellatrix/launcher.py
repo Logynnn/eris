@@ -1,9 +1,15 @@
 import contextlib
 import logging
+import asyncio
+import traceback
+import importlib
 from pathlib import Path
 
+import click
+
 import config
-from bot import Bellatrix
+from bot import Bellatrix, all_extensions
+from utils.database import DatabaseManager
 
 
 # TODO: Adicionar uma documentação decente.
@@ -53,10 +59,37 @@ def run_bot():
     bot = Bellatrix()
     bot.run(config.token)
 
-def main():
+@click.group(invoke_without_command=True, options_metavar='[options]')
+@click.pass_context
+def main(ctx: click.Context):
     '''Inicia o bot.'''
-    with setup_logging():
-        run_bot()
+    if ctx.invoked_subcommand is None:
+        with setup_logging():
+            run_bot()
+
+@main.group(short_help='coisas do banco de dados', options_metavar='[options]')
+def db():
+    pass
+
+@db.command(short_help='inicializa o banco de dados', options_metavar='[options]')
+@click.option('-q', '--quiet', help='output menos detalhado', is_flag=True)
+def init(quiet: bool):
+    '''Faz a criação do banco de dados para você.'''
+    loop = asyncio.get_event_loop()
+    run = loop.run_until_complete
+
+    try:
+        manager = run(DatabaseManager.from_dsn(config.postgres, loop=loop))
+    except Exception:
+        return click.echo(f'Could not create PostgreSQL connection pool\n{traceback.format_exc()}', err=True)
+
+    for ext in all_extensions:
+        try:
+            importlib.import_module(ext)
+        except Exception:
+            return click.echo(f'Could not load {ext}\n{traceback.format_exc()}', err=True)
+
+    run(manager.initialize())
 
 if __name__ == '__main__':
     main()
