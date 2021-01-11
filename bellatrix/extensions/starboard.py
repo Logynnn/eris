@@ -155,7 +155,49 @@ class Starboard(commands.Cog):
                 await new_message.edit(content=content, embed=embed)
 
     async def unstar_message(self, channel: discord.TextChannel, message_id: int, starrer_id: int):
-        pass
+        query = '''
+            DELETE FROM starrers USING starboard_entries entry
+            WHERE entry.message_id = $1
+            AND entry.id = starrers.entry_id
+            AND starrers.author_id = $2
+            RETURNING starrers.entry_id, entry.bot_message_id        
+        '''
+
+        record = await self.bot.manager.fetch_row(query, message_id, starrer_id)
+        if record is None:
+            raise StarError('You have not starred this message')
+
+        entry_id = record[0]
+        bot_message_id = record[1]
+
+        query = 'SELECT COUNT(*) FROM starrers WHERE entry_id = $1'
+        count = await self.bot.manager.fetch_row(query, entry_id)
+        count = count[0]
+
+        if count == 0:
+            query = 'DELETE FROM starboard_entries WHERE id = $1'
+            await self.bot.manager.execute(query, entry_id)
+
+        if bot_message_id is None:
+            return
+
+        bot_message = await self.get_message(self.starboard, bot_message_id)
+        if bot_message is None:
+            return
+
+        if count < THRESHOLD:
+            if count:
+                query = 'UPDATE starboard_entries SET bot_message_id = NULL WHERE id = $1'
+                await self.bot.manager.execute(query, entry_id)
+
+            await bot_message.delete()
+        else:
+            message = await self.get_message(channel, message_id)
+            if message is None:
+                raise StarError('Message not found')
+
+            content, embed = await self.get_content(message, count)
+            await bot_message.edit(content=content, embed=embed)
 
     async def get_message(self, channel: discord.TextChannel, message_id: int) -> discord.Message:
         try:
