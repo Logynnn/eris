@@ -20,6 +20,7 @@ class PunishmentMenu(_MenuBase):
         self._reasons = [
             'Violação das Diretrizes do Discord',
             'Má convivência',
+            'Conteúdo NSFW',
             'Flood/Spam',
             'Divulgação',
             'Desrespeito aos tópicos',
