@@ -91,6 +91,9 @@ class Mod(commands.Cog):
         member = self.cosmic.get_member(member_id)
         moderator = self.cosmic.get_member(moderator_id)
 
+        if not member:
+            return
+
         reason = f'Removendo silenciamento realizado por {moderator}'
 
         try:
