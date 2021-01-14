@@ -49,7 +49,7 @@ class Mod(commands.Cog):
             self.bot.dispatch('moderation_command', 'ban', ctx, member)
 
     @commands.command(aliases=['k'])
-    @commands.has_permissions(kick_members=True)
+    @commands.has_guild_permissions(kick_members=True)
     async def kick(self, ctx: commands.Context, *, member: discord.Member):
         image = await self.get_punishment_image(ctx.author)
 
