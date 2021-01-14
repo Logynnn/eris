@@ -68,6 +68,9 @@ class Mod(commands.Cog):
         if not reminder:
             return await ctx.reply('Serviço indisponível, tente novamente mais tarde.')
 
+        if self.bot.staff_role in member.roles:
+            return await ctx.reply('Não foi possível silenciar este usuário.')
+
         await member.add_roles(self.mute_role, reason=f'Ação realizada por {ctx.author} (ID: {ctx.author.id}')
         timer = await reminder.create_timer(
             when.datetime,
