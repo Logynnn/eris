@@ -21,7 +21,7 @@ class Mod(commands.Cog):
         self.log_channel = bot.cosmic.get_channel(LOG_CHANNEL_ID)
 
     async def get_punishment_image(self, member: discord.Member):
-        query = 'SELECT url FROM punishment_image WHERE user_id = $1'
+        query = 'SELECT url FROM punishment_images WHERE user_id = $1'
         fetch = await self.bot.manager.fetch_row(query, member.id)
         
         if not fetch:
