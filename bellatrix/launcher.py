@@ -6,6 +6,7 @@ import importlib
 from pathlib import Path
 
 import click
+import humanize
 
 import config
 from bot import Bellatrix, all_extensions
@@ -56,6 +57,8 @@ def setup_logging():
             logger.removeHandler(handler)
 
 def run_bot():
+    humanize.activate('pt_BR')
+
     bot = Bellatrix()
     run = bot.loop.run_until_complete
 

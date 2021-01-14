@@ -1,4 +1,4 @@
 discord.py[voice]
 asyncpg
 click
-git+https://github.com/Rapptz/discord-ext-menus
+humanize
