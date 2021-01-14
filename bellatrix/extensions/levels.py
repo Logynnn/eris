@@ -140,4 +140,4 @@ class Levels(commands.Cog):
             await message.channel.send(author.mention, embed=embed)
 
 def setup(bot: commands.Bot):
-    bot.add_cog(LevelSystem(bot))
+    bot.add_cog(Levels(bot))
