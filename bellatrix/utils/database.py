@@ -4,6 +4,7 @@ import inspect
 import json
 import click
 import traceback
+import datetime
 from collections import OrderedDict
 
 import asyncpg
@@ -98,6 +99,24 @@ class Integer(SQLType):
             return 'SMALLINT'
 
         return 'INTEGER'
+
+class Datetime(SQLType):
+    python = datetime.datetime
+
+    def __init__(self, *, timezone: bool=False):
+        self.timezone = timezone
+
+    def to_sql(self):
+        if self.timezone:
+            return 'TIMESTAMP WITH TIME ZONE'
+
+        return 'TIMESTAMP'
+
+class JSON(SQLType):
+    python = None
+
+    def to_sql(self):
+        return 'JSONB'
 
 class ForeignKey(SQLType):
     def __init__(self, table: str, column: str, *, sql_type: SQLType=None,
