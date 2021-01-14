@@ -43,8 +43,8 @@ class Levels(commands.Cog):
     def _get_level_from_exp(exp: int) -> int:
         level = 0
 
-        while exp >= LevelSystem._get_level_exp(level):
-            exp -= LevelSystem._get_level_exp(level)
+        while exp >= Levels._get_level_exp(level):
+            exp -= Levels._get_level_exp(level)
             level += 1
 
         return level
@@ -86,7 +86,7 @@ class Levels(commands.Cog):
         profile = self._cache[member.id]
         rewards = []
 
-        user_level = LevelSystem._get_level_from_exp(profile['exp'])
+        user_level = Levels._get_level_from_exp(profile['exp'])
 
         for level, role in self._level_roles.items():
             if level > user_level:
