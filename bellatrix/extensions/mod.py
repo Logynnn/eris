@@ -36,7 +36,7 @@ class Mod(commands.Cog):
         return fetch[0]
 
     @commands.command(aliases=['b'])
-    @commands.has_permissions(ban_members=True)
+    @commands.has_guild_permissions(ban_members=True)
     async def ban(self, ctx: commands.Context, *, member: discord.Member):
         image = await self.get_punishment_image(ctx.author)
 
