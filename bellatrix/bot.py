@@ -41,7 +41,7 @@ class Bellatrix(commands.Bot):
         for ext in all_extensions:
             try:
                 self.load_extension(ext)
-            except Exception as e:
+            except Exception:
                 self.logger.exception(f'Extension \'{ext}\' could not be loaded.')
             else:
                 self.logger.info(f'Extension \'{ext}\' has been loaded.')
