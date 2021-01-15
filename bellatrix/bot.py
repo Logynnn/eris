@@ -48,11 +48,17 @@ class Bellatrix(commands.Bot):
 
         print(f'Online com {len(self.users)} usuários')
 
-    async def process_commands(self, message: discord.Message):
-        if message.author.bot:
+    async def on_message(self, message: discord.Message):
+        if not message.guild:
             return
 
-        if not message.guild:
+        await self.process_commands(message)
+
+    async def process_commands(self, message: discord.Message):
+        if not isinstance(message.author, discord.Member):
+            return
+
+        if message.author.bot:
             return
 
         ctx = await self.get_context(message, cls=Context)
