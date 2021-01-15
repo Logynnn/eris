@@ -102,6 +102,9 @@ class Levels(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        if message.author.bot:
+            return
+
         if not hasattr(self, '_cache'):
             await self.populate_cache()
 
