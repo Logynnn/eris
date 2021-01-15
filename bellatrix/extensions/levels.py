@@ -68,7 +68,7 @@ class Levels(commands.Cog):
             profile = {'exp': 0, 'last_message': now}
             self._cache[member.id] = profile
 
-            query = 'INSERT INTO levels VALUES ($1, $2, $3)'
+            query = 'INSERT INTO levels VALUES ($1, $2, $3) ON CONFLICT (user_id) DO NOTHING'
             await self.bot.manager.execute(query, member.id, 0, now)
         finally:
             return profile
