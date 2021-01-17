@@ -75,10 +75,7 @@ class Rewards(commands.Cog):
         self._cache[member.id] = 1
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        if message.author.bot:
-            return
-
+    async def on_regular_message(self, message: discord.Message):
         if not hasattr(self, '_cache'):
             await self.populate_cache()
 

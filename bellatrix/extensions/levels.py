@@ -101,10 +101,7 @@ class Levels(commands.Cog):
         return rewards
 
     @commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        if message.author.bot:
-            return
-
+    async def on_regular_message(self, message: discord.Message):
         if not hasattr(self, '_cache'):
             await self.populate_cache()
 

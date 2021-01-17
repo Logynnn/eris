@@ -55,9 +55,7 @@ class Bellatrix(commands.Bot):
         if message.author.bot:
             return
 
-        if not message.guild:
-            return
-
+        self.dispatch('regular_message', message)
         await self.process_commands(message)
 
     async def process_commands(self, message: discord.Message):
