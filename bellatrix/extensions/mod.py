@@ -1,4 +1,5 @@
 import typing
+import re
 
 import discord
 import humanize
@@ -23,6 +24,8 @@ class Mod(commands.Cog):
         self.bot = bot
         self.cosmic = bot.cosmic
 
+        self._url_regex = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+
         self.log_channel = bot.cosmic.get_channel(LOG_CHANNEL_ID)
         self.mute_role = bot.cosmic.get_role(MUTE_ROLE_ID)
 
@@ -34,6 +37,26 @@ class Mod(commands.Cog):
             return None
 
         return fetch[0]
+
+    @commands.group()
+    async def config(self, ctx: commands.Context):
+        pass
+
+    @config.command()
+    async def image(self, ctx: commands.Context, url: str):
+        match = self._url_regex.match(url)
+        if not match or not match.group(0):
+            return await ctx.reply('Este é um link inválido.')
+
+        query = '''
+            INSERT INTO punishment_images (user_id, url)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id)
+            DO UPDATE SET url = $2
+        '''
+        await self.bot.manager.execute(query, ctx.author.id, url)
+
+        await ctx.reply('Você mudou sua imagem de banimento com sucesso.')
 
     @commands.command(aliases=['b'])
     @commands.has_guild_permissions(ban_members=True)
