@@ -49,3 +49,22 @@ class PunishmentMenu(_MenuBase):
     async def prompt(self, ctx: commands.Context):
         await self.start(ctx, wait=True)
         return self.reason
+
+class ListPaginator(menus.ListPageSource):
+    def __init__(self, data):
+        super().__init__(data, per_page=8)
+
+    async def format_page(self, menu: _MenuBase, entries):
+        return menu.ctx.get_embed('\n'.join(entries))
+
+class FieldPaginator(menus.ListPageSource):
+    def __init__(self, data):
+        super().__init__(data, per_page=8)
+
+    async def format_page(self, menu: _MenuBase, entries):
+        return menu.ctx.get_embed(fields=entries)
+
+class Menu(menus.MenuPages):
+    def __init__(self, data, *, paginator_type: int=0):
+        _types = [ListPaginator, FieldPaginator]
+        super().__init__(_types[paginator_type](data), delete_message_after=True)

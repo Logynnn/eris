@@ -6,6 +6,7 @@ from discord.ext import commands, tasks
 
 from utils import database
 from utils.embed import Embed
+from utils.menus import Menu
 
 
 LEVEL_ROLES = (
@@ -48,6 +49,27 @@ class Levels(commands.Cog):
             level += 1
 
         return level
+
+    @commands.command()
+    async def rank(self, ctx: commands.Context):
+        query = 'SELECT * FROM levels ORDER BY exp DESC'
+        fetch = await self.bot.manager.fetch(query)
+
+        data = []
+        for i, record in enumerate(fetch, start=1):
+            member = ctx.guild.get_member(record['user_id'])
+            exp = record['exp']
+            level = Levels._get_level_from_exp(exp)
+
+            field = {
+                'name': f'{i}. {member}',
+                'value': f'Experiência: **{exp}**\nNível: **{level}**',
+                'inline': False
+            }
+            data.append(field)
+
+        menu = Menu(data, paginator_type=1)
+        await menu.start(ctx)
 
     async def populate_cache(self):
         query = 'SELECT * FROM levels'
