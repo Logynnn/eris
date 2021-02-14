@@ -12,4 +12,5 @@ class Context(commands.Context):
 
     async def reply(self, content: str=None, **kwargs):
         '''Este método foi sobrescrito para enviar ``Embed`` automaticamente.'''
-        return await super().reply(embed=self.get_embed(content, **kwargs))
+        embed = kwargs.get('embed', self.get_embed(content, **kwargs))
+        return await super().reply(embed=embed)
