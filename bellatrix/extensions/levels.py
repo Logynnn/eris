@@ -68,6 +68,9 @@ class Levels(commands.Cog):
             }
             data.append(field)
 
+        if not data:
+            return await ctx.reply('Não há nada por aqui.')
+
         menu = Menu(data, paginator_type=1)
         await menu.start(ctx)
 
