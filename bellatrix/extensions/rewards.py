@@ -7,7 +7,6 @@ from utils import database
 from utils.embed import Embed
 
 
-GENERAL_CHANNEL_ID = 795462404343463949
 REWARD_ROLE_ID = 799739922651152394
 
 class MostActive(database.Table, table_name='most_active'):
@@ -18,7 +17,6 @@ class Rewards(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.cosmic = bot.cosmic
-        self.general_channel = bot.cosmic.get_channel(GENERAL_CHANNEL_ID)
 
         self.give_rewards.start()
 
@@ -53,7 +51,7 @@ class Rewards(commands.Cog):
         await self.bot.manager.execute(query)
 
         await user.add_roles(reward_role, reason='Adicionando cargo de membro mais ativo da semana')
-        await self.general_channel.send(embed=embed)
+        await self.bot.general_channel.send(embed=embed)
 
     @give_rewards.before_loop
     async def before_give_rewards(self):

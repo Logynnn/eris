@@ -12,6 +12,7 @@ from utils.context import Context
 
 COSMIC_GUILD_ID = 795017809402921041
 STAFF_ROLE_ID = 795026574453899304
+GENERAL_CHANNEL_ID = 795462404343463949
 
 all_extensions = []
 for root, _, files in os.walk('extensions'):
@@ -37,6 +38,7 @@ class Bellatrix(commands.Bot):
     async def on_ready(self):
         self.cosmic = self.get_guild(COSMIC_GUILD_ID)
         self.staff_role = self.cosmic.get_role(STAFF_ROLE_ID)
+        self.general_channel = self.cosmic.get_channel(GENERAL_CHANNEL_ID)
 
         for ext in all_extensions:
             try:
