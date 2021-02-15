@@ -4,6 +4,7 @@ import asyncio
 
 import asyncpg
 import discord
+import humanize
 from discord.ext import commands
 
 from utils import database
@@ -43,6 +44,10 @@ class Timer:
 
         return cls(record=pseudo)
 
+    @property
+    def human_time(self) -> str:
+        return humanize.precisedelta(self.expires - self.created_at, format='%0.0f')
+
     def __eq__(self, other: typing.Any):
         return isinstance(other, type(self)) and other.id == self.id
 
@@ -64,11 +69,8 @@ class Reminder(commands.Cog):
         try:
             while not self.bot.is_closed():
                 timer = self._current_timer = await self.wait_for_active_timers(days=40)
-                now = datetime.datetime.utcnow()
 
-                if timer.expires >= now:
-                    await discord.utils.sleep_until(timer.expires)
-
+                await discord.utils.sleep_until(timer.expires)
                 await self.call_timer(timer)
         except asyncio.CancelledError:
             raise
@@ -105,7 +107,7 @@ class Reminder(commands.Cog):
 
     async def create_timer(self, *args, **kwargs):
         when, event, *args = args
-        now = kwargs.get('created', datetime.datetime.utcnow())
+        now = kwargs.pop('created', datetime.datetime.utcnow())
 
         timer = Timer.temporary(event=event, args=args, kwargs=kwargs, expires=when, created=now)
         delta = (when - now).total_seconds()
@@ -115,10 +117,10 @@ class Reminder(commands.Cog):
 
         query = '''
             INSERT INTO reminders (event, extra, expires, created)
-            VALUES ($1, $2, $3::jsonb, $4)
+            VALUES ($1, $2::jsonb, $3, $4)
             RETURNING id
         '''
-        
+
         fetch = await self.bot.manager.fetch_row(query, event, {'args': args, 'kwargs': kwargs}, when, now)
         timer.id = fetch[0]
 
