@@ -12,7 +12,7 @@ from utils.context import Context
 
 COSMIC_GUILD_ID = 795017809402921041
 STAFF_ROLE_ID = 795026574453899304
-GENERAL_CHANNEL_ID = 795462404343463949
+GENERAL_CHANNEL_ID = 810910658458550303
 
 all_extensions = []
 for root, _, files in os.walk('extensions'):
