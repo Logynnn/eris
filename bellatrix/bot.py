@@ -49,6 +49,8 @@ class Bellatrix(commands.Bot):
             \.(?:jpg|jpeg|png|gif|webp)$
         ''', re.VERBOSE)
 
+        self.load_extension('jishaku')
+
         for ext in all_extensions:
             try:
                 self.load_extension(ext)
