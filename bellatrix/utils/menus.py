@@ -12,6 +12,33 @@ class _MenuBase(menus.Menu):
 
         await super().update(payload)
 
+class ConfirmMenu(_MenuBase):
+    def __init__(self, content: str):
+        super().__init__(delete_message_after=True)
+        self.content = content
+        self.result = None
+
+    async def send_initial_message(self, ctx: commands.Context, _):
+        return await ctx.reply(self.content)
+
+    @menus.button('✅')
+    async def on_confirm(self, payload: discord.RawReactionActionEvent):
+        self.result = True
+        self.stop()
+
+    @menus.button('❌')
+    async def on_deny(self, payload: discord.RawReactionActionEvent):
+        self.result = False
+        self.stop()
+
+    async def prompt(self, ctx: commands.Context):
+        await self.start(ctx, wait=True)
+
+        if self.result is None:
+            await ctx.reply('Você demorou muito para responder.')
+        
+        return self.result
+
 class PunishmentMenu(_MenuBase):
     def __init__(self):
         super().__init__(delete_message_after=True)
