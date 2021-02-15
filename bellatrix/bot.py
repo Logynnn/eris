@@ -34,9 +34,12 @@ class Bellatrix(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix='b/', intents=discord.Intents.all())
         self.logger = logging.getLogger('bellatrix')
+
+    @property
+    def cosmic(self) -> discord.Guild:
+        return self.get_guild(COSMIC_GUILD_ID)
         
     async def on_ready(self):
-        self.cosmic = self.get_guild(COSMIC_GUILD_ID)
         self.staff_role = self.cosmic.get_role(STAFF_ROLE_ID)
         self.general_channel = self.cosmic.get_channel(GENERAL_CHANNEL_ID)
 
