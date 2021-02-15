@@ -119,7 +119,7 @@ class Guilds(commands.Cog):
         await ctx.author.add_roles(role)
 
         all_roles = ctx.guild.roles[1:]
-        all_roles.insert(self.separator_role.position - 1, role)
+        all_roles.insert(all_roles.index(self.separator_role), role)
 
         positions = {role: index for index, role in enumerate(all_roles, start=1)}
         await ctx.guild.edit_role_positions(positions=positions, reason='Consertando as posições dos cargos.')
