@@ -12,6 +12,17 @@ class _MenuBase(menus.Menu):
 
         await super().update(payload)
 
+
+class _MenuPagesBase(menus.MenuPages):
+    async def update(self, payload: discord.RawReactionActionEvent):
+        if self._can_remove_reactions:
+            if payload.event_type == 'REACTION_ADD':
+                await self.message.remove_reaction(payload.emoji, payload.member)
+            else:
+                return
+
+        await super().update(payload)
+
 class ConfirmMenu(_MenuBase):
     def __init__(self, content: str):
         super().__init__(delete_message_after=True)
@@ -78,20 +89,22 @@ class PunishmentMenu(_MenuBase):
         return self.reason
 
 class ListPaginator(menus.ListPageSource):
-    def __init__(self, data):
-        super().__init__(data, per_page=8)
+    def __init__(self, data, per_page: int=8):
+        super().__init__(data, per_page=per_page)
 
     async def format_page(self, menu: _MenuBase, entries):
-        return menu.ctx.get_embed('\n'.join(entries))
+        footer = {'text': f'Página {menu.current_page + 1}/{self.get_max_pages()}'}
+        return menu.ctx.get_embed('\n'.join(entries), footer=footer)
 
 class FieldPaginator(menus.ListPageSource):
-    def __init__(self, data):
-        super().__init__(data, per_page=8)
+    def __init__(self, data, per_page: int=8):
+        super().__init__(data, per_page=per_page)
 
     async def format_page(self, menu: _MenuBase, entries):
-        return menu.ctx.get_embed(fields=entries)
+        footer = {'text': f'Página {menu.current_page + 1}/{self.get_max_pages()}'}
+        return menu.ctx.get_embed(fields=entries, footer=footer)
 
-class Menu(menus.MenuPages):
-    def __init__(self, data, *, paginator_type: int=0):
+class Menu(_MenuPagesBase):
+    def __init__(self, data, *, paginator_type: int=0, per_page: int=8):
         _types = [ListPaginator, FieldPaginator]
-        super().__init__(_types[paginator_type](data), delete_message_after=True)
+        super().__init__(_types[paginator_type](data, per_page=per_page), delete_message_after=True)
