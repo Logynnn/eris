@@ -24,8 +24,6 @@ class Mod(commands.Cog):
         self.bot = bot
         self.cosmic = bot.cosmic
 
-        self._url_regex = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
-
         self.log_channel = bot.cosmic.get_channel(LOG_CHANNEL_ID)
         self.mute_role = bot.cosmic.get_role(MUTE_ROLE_ID)
 
@@ -44,7 +42,7 @@ class Mod(commands.Cog):
 
     @config.command()
     async def image(self, ctx: commands.Context, url: str):
-        match = self._url_regex.match(url)
+        match = self.bot._image_url_regex.match(url)
         if not match or not match.group(0):
             return await ctx.reply('Este é um link inválido.')
 

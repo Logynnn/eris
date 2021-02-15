@@ -1,4 +1,3 @@
-import re
 from typing import Optional
 
 import asyncpg
@@ -80,11 +79,6 @@ class GuildConverter(commands.Converter):
 class Guilds(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self._url_regex = re.compile(r'''
-            http[s]?://
-            (?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
-            \.(?:jpg|jpeg|png|gif|webp)$
-        ''', re.VERBOSE)
 
     @property
     def separator_role(self) -> discord.Role:
@@ -180,7 +174,7 @@ class Guilds(commands.Cog):
         if guild.owner.id != ctx.author.id:
             return await ctx.reply('Você não é o dono desta guilda.')
 
-        match = self._url_regex.match(url)
+        match = self.bot._image_url_regex.match(url)
         if not match or not match.group(0):
             return await ctx.reply('Esta é uma URL inválida.')
 
