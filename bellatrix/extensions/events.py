@@ -22,7 +22,7 @@ class Events(commands.Cog):
             guild = after.guild
 
             embed = discord.Embed(
-                title=f'{after.name} impulsionou o servidor!'
+                title=f'{after.name} impulsionou o servidor!',
                 description=f'Uma chuva de aplausos! {after.mention} impulsionou o servidor! ❤️'
                 color=self.nitro_booster_role.color
             )
