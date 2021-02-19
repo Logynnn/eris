@@ -13,28 +13,44 @@ from utils import database
 THRESHOLD = 4
 STARBOARD_CHANNEL_ID = 797633732340219964
 
+
 class StarError(commands.CheckFailure):
     pass
+
 
 class StarboardEntry(database.Table, table_name='starboard_entries'):
     id = database.PrimaryKeyColumn()
 
-    bot_message_id = database.Column(database.Integer(big=True), index=True, nullable=True)
-    message_id = database.Column(database.Integer(big=True), index=True, unique=True)
+    bot_message_id = database.Column(
+        database.Integer(
+            big=True),
+        index=True,
+        nullable=True)
+    message_id = database.Column(
+        database.Integer(
+            big=True),
+        index=True,
+        unique=True)
     channel_id = database.Column(database.Integer(big=True))
     author_id = database.Column(database.Integer(big=True))
+
 
 class Starrers(database.Table):
     id = database.PrimaryKeyColumn()
 
     author_id = database.Column(database.Integer(big=True))
-    entry_id = database.Column(database.ForeignKey('starboard_entries', 'id'), index=True)
+    entry_id = database.Column(
+        database.ForeignKey(
+            'starboard_entries',
+            'id'),
+        index=True)
 
     @classmethod
     def create_table(cls, *, exists_ok=True):
         statement = super().create_table(exists_ok=exists_ok)
         sql = 'CREATE UNIQUE INDEX IF NOT EXISTS starrers_uniq_idx ON starrers (author_id, entry_id)'
         return statement + '\n' + sql
+
 
 class Starboard(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -47,7 +63,7 @@ class Starboard(commands.Cog):
 
         self._message_cache = {}
         self.clean_message_cache.start()
-    
+
     def cog_unload(self):
         self.clean_message_cache.cancel()
 
@@ -101,7 +117,8 @@ class Starboard(commands.Cog):
         if message.author.id == starrer_id:
             raise StarError('You cannot star your own message')
 
-        if (len(message.content) == 0 and len(message.attachments) == 0) or message.type is not discord.MessageType.default:
+        if (len(message.content) == 0 and len(message.attachments)
+                == 0) or message.type is not discord.MessageType.default:
             raise StarError('This message cannot be starred')
 
         query = '''
@@ -160,7 +177,7 @@ class Starboard(commands.Cog):
             WHERE entry.message_id = $1
             AND entry.id = starrers.entry_id
             AND starrers.author_id = $2
-            RETURNING starrers.entry_id, entry.bot_message_id        
+            RETURNING starrers.entry_id, entry.bot_message_id
         '''
 
         record = await self.bot.manager.fetch_row(query, message_id, starrer_id)
@@ -225,22 +242,34 @@ class Starboard(commands.Cog):
 
         if message.embeds:
             data = message.embeds[0]
-            if data.type == 'image' and not self.is_url_spoiler(message.content, data.url):
+            if data.type == 'image' and not self.is_url_spoiler(
+                    message.content, data.url):
                 embed.set_image(url=data.url)
 
         if message.attachments:
             file = message.attachments[0]
             spoiler = file.is_spoiler()
-            
-            if not spoiler and file.url.lower().endswith(('png', 'jpeg', 'jpg', 'gif', 'webp')):
+
+            if not spoiler and file.url.lower().endswith(
+                    ('png', 'jpeg', 'jpg', 'gif', 'webp')):
                 embed.set_image(url=file.url)
             elif spoiler:
-                embed.add_field(name='Anexo', value=f'||[{file.filename}]({file.url})||', inline=False)
+                embed.add_field(
+                    name='Anexo',
+                    value=f'||[{file.filename}]({file.url})||',
+                    inline=False)
             else:
-                embed.add_field(name='Anexo', value=f'[{file.filename}]({file.url})', inline=False)
+                embed.add_field(
+                    name='Anexo',
+                    value=f'[{file.filename}]({file.url})',
+                    inline=False)
 
-        embed.add_field(name='Mensagem original', value=f'[Clique aqui]({message.jump_url})')
-        embed.set_author(name=message.author.display_name, icon_url=message.author.avatar_url_as(format='png'))
+        embed.add_field(name='Mensagem original',
+                        value=f'[Clique aqui]({message.jump_url})')
+        embed.set_author(
+            name=message.author.display_name,
+            icon_url=message.author.avatar_url_as(
+                format='png'))
 
         return content, embed
 

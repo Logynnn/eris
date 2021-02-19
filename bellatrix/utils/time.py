@@ -18,7 +18,7 @@ class ShortTime:
         (?:(?P<seconds>[0-9]{1,9})\s?(?:segundos?|s(?:egs?)?))?
     ''', re.VERBOSE)
 
-    def __init__(self, argument: str, *, now: datetime.datetime=None):
+    def __init__(self, argument: str, *, now: datetime.datetime = None):
         argument = unidecode(argument)
         match = self.compiled.fullmatch(argument)
 
@@ -34,10 +34,13 @@ class ShortTime:
     async def convert(cls, ctx: commands.Context, argument: str):
         return cls(argument, now=ctx.message.created_at)
 
-class HumanTime:
-    calendar = pdt.Calendar(pdt.Constants('pt_BR'), version=pdt.VERSION_CONTEXT_STYLE)
 
-    def __init__(self, argument: str, *, now: datetime.datetime=None):
+class HumanTime:
+    calendar = pdt.Calendar(
+        pdt.Constants('pt_BR'),
+        version=pdt.VERSION_CONTEXT_STYLE)
+
+    def __init__(self, argument: str, *, now: datetime.datetime = None):
         argument = unidecode(argument)
 
         now = now or datetime.datetime.utcnow()
@@ -47,7 +50,11 @@ class HumanTime:
             raise commands.BadArgument('Invalid time provided')
 
         if not status.hasTime:
-            dt = dt.replace(hour=now.hour, minute=now.minute, second=now.second, microsecond=now.microsecond)
+            dt = dt.replace(
+                hour=now.hour,
+                minute=now.minute,
+                second=now.second,
+                microsecond=now.microsecond)
 
         self.datetime = dt
         self._past = dt < now
@@ -56,8 +63,9 @@ class HumanTime:
     async def convert(cls, ctx: commands.Context, argument: str):
         return cls(argument, now=ctx.message.created_at)
 
+
 class Time(HumanTime):
-    def __init__(self, argument: str, *, now: datetime.datetime=None):
+    def __init__(self, argument: str, *, now: datetime.datetime = None):
         argument = unidecode(argument)
 
         try:
@@ -68,10 +76,10 @@ class Time(HumanTime):
             self.datetime = o.datetime
             self._past = False
 
+
 class FutureTime(Time):
-    def __init__(self, argument: str, now: datetime.datetime=None):
+    def __init__(self, argument: str, now: datetime.datetime = None):
         super().__init__(argument, now=now)
 
         if self._past:
             raise commands.BadArgument('Time is in the past')
-    

@@ -9,9 +9,11 @@ from utils.embed import Embed
 
 REWARD_ROLE_ID = 799739922651152394
 
+
 class MostActive(database.Table, table_name='most_active'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
     messages = database.Column(database.Integer)
+
 
 class Rewards(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -86,6 +88,7 @@ class Rewards(commands.Cog):
         await self.bot.manager.execute(query, author.id)
 
         self._cache[author.id] += 1
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(Rewards(bot))

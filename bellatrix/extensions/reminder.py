@@ -14,9 +14,12 @@ class Reminders(database.Table):
     id = database.PrimaryKeyColumn()
 
     expires = database.Column(database.Datetime, index=True)
-    created = database.Column(database.Datetime, default='now() at time zone \'utc\'')
+    created = database.Column(
+        database.Datetime,
+        default='now() at time zone \'utc\'')
     event = database.Column(database.String)
     extra = database.Column(database.JSON, default='\'{}\'::jsonb')
+
 
 class Timer:
     __slots__ = ('args', 'kwargs', 'event', 'id', 'created_at', 'expires')
@@ -46,13 +49,15 @@ class Timer:
 
     @property
     def human_time(self) -> str:
-        return humanize.precisedelta(self.expires - self.created_at, format='%0.0f')
+        return humanize.precisedelta(
+            self.expires - self.created_at, format='%0.0f')
 
     def __eq__(self, other: typing.Any):
         return isinstance(other, type(self)) and other.id == self.id
 
     def __repr__(self):
         return f'<Timer created={self.created_at} expires={self.expires} event={self.event!r}>'
+
 
 class Reminder(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -84,7 +89,7 @@ class Reminder(commands.Cog):
 
         self.bot.dispatch(f'{timer.event}_complete', timer)
 
-    async def wait_for_active_timers(self, *, days: int=7):
+    async def wait_for_active_timers(self, *, days: int = 7):
         timer = await self.get_active_timer(days=days)
         if timer is not None:
             self._have_data.set()
@@ -96,10 +101,10 @@ class Reminder(commands.Cog):
         await self._have_data.wait()
         return await self.get_active_timer(days=days)
 
-    async def get_active_timer(self, *, days: int=7) -> Timer:
+    async def get_active_timer(self, *, days: int = 7) -> Timer:
         query = 'SELECT * FROM reminders WHERE expires < (CURRENT_DATE + $1::interval) ORDER BY expires LIMIT 1'
         record = await self.bot.manager.fetch_row(query, datetime.timedelta(days=days))
-        return Timer(record=record) if record else None 
+        return Timer(record=record) if record else None
 
     async def short_timer_optimisation(self, seconds: int, timer: Timer):
         await asyncio.sleep(seconds)
@@ -109,10 +114,17 @@ class Reminder(commands.Cog):
         when, event, *args = args
         now = kwargs.pop('created', datetime.datetime.utcnow())
 
-        timer = Timer.temporary(event=event, args=args, kwargs=kwargs, expires=when, created=now)
+        timer = Timer.temporary(
+            event=event,
+            args=args,
+            kwargs=kwargs,
+            expires=when,
+            created=now)
         delta = (when - now).total_seconds()
         if delta <= 60:
-            self.bot.loop.create_task(self.short_timer_optimisation(delta, timer))
+            self.bot.loop.create_task(
+                self.short_timer_optimisation(
+                    delta, timer))
             return timer
 
         query = '''
@@ -132,6 +144,7 @@ class Reminder(commands.Cog):
             self._task = self.bot.loop.create_task(self.dispatch_timers())
 
         return timer
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(Reminder(bot))

@@ -11,6 +11,7 @@ from utils import checks
 
 GUILD_SEPARATOR_ROLE_ID = 804026477745143808
 
+
 class GuildsTable(database.Table, table_name='guilds'):
     id = database.PrimaryKeyColumn()
     name = database.Column(database.String, index=True, unique=True)
@@ -19,9 +20,11 @@ class GuildsTable(database.Table, table_name='guilds'):
     role_id = database.Column(database.Integer(big=True), unique=True)
     owner_id = database.Column(database.Integer(big=True), unique=True)
 
+
 class GuildMembers(database.Table, table_name='guild_members'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
     guild_id = database.Column(database.ForeignKey('guilds', 'id'), index=True)
+
 
 class Guild:
     def __init__(self, ctx: commands.Context, *, record: asyncpg.Record):
@@ -40,9 +43,10 @@ class Guild:
         get_member = ctx.guild.get_member
 
         self.owner = get_member(owner_id)
-        self.members = [get_member(user_id) for user_id in members if user_id != owner_id]
+        self.members = [get_member(user_id)
+                        for user_id in members if user_id != owner_id]
 
-    async def delete(self, forced: bool=False):
+    async def delete(self, forced: bool = False):
         term = 'esta' if forced else 'sua'
 
         result = await self._ctx.prompt(f'Você realmente deseja deletar {term} guilda?')
@@ -62,6 +66,7 @@ class Guild:
     def __repr__(self):
         return '<Guild id={0.id} name={0.name!r}>'.format(self)
 
+
 class GuildConverter(commands.Converter):
     async def convert(self, ctx: commands.Context, argument: str):
         query = '''
@@ -75,6 +80,7 @@ class GuildConverter(commands.Converter):
         '''
         record = await ctx.bot.manager.fetch_row(query, argument)
         return Guild(ctx, record=record) if record else None
+
 
 class Guilds(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -103,7 +109,7 @@ class Guilds(commands.Cog):
         return Guild(ctx, record=record) if record else None
 
     @commands.group(invoke_without_command=True)
-    async def guild(self, ctx: commands.Context, *, guild: GuildConverter=None):
+    async def guild(self, ctx: commands.Context, *, guild: GuildConverter = None):
         await self.guild_info(ctx, guild=guild)
 
     @guild.command(name='create')
@@ -121,7 +127,11 @@ class Guilds(commands.Cog):
         all_roles = ctx.guild.roles[1:]
         all_roles.insert(all_roles.index(self.separator_role), role)
 
-        positions = {role: index for index, role in enumerate(all_roles, start=1)}
+        positions = {
+            role: index for index,
+            role in enumerate(
+                all_roles,
+                start=1)}
         await ctx.guild.edit_role_positions(positions=positions, reason='Consertando as posições dos cargos.')
 
         query = '''
@@ -228,7 +238,7 @@ class Guilds(commands.Cog):
         await ctx.reply(f'Você alterou a cor da sua guilda para `{hex_color}`', color=color.value)
 
     @guild.command(name='info')
-    async def guild_info(self, ctx: commands.Context, *, guild: GuildConverter=None):
+    async def guild_info(self, ctx: commands.Context, *, guild: GuildConverter = None):
         guild = guild or await self.get_guild(ctx, ctx.author.id)
 
         if not guild:
@@ -246,8 +256,10 @@ class Guilds(commands.Cog):
         mentions = [member.mention for member in guild.members]
         members = ', '.join(mentions) or 'Não há membros nessa guilda.'
 
-        fields.append({'name': 'Dono', 'value': owner.mention, 'inline': False})
-        fields.append({'name': f'Membros [{len(mentions)}]', 'value': members, 'inline': False})
+        fields.append(
+            {'name': 'Dono', 'value': owner.mention, 'inline': False})
+        fields.append(
+            {'name': f'Membros [{len(mentions)}]', 'value': members, 'inline': False})
 
         await ctx.reply(
             title=title,
@@ -278,6 +290,7 @@ class Guilds(commands.Cog):
     @commands.command()
     async def guilds(self, ctx: commands.Context):
         await self.guild_list(ctx)
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(Guilds(bot))

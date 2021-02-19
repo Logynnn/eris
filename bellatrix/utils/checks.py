@@ -11,11 +11,13 @@ ONLY_PREMIUM = (
     NITRO_BOOSTER_ROLE_ID
 )
 
+
 def is_premium():
     def predicate(ctx: commands.Context):
         return any(role.id in ONLY_PREMIUM for role in ctx.author.roles)
 
     return commands.check(predicate)
+
 
 def is_staffer():
     def predicate(ctx: commands.Context):

@@ -13,6 +13,7 @@ import asyncpg
 class SchemaError(Exception):
     pass
 
+
 class DatabaseManager:
     def __init__(self, pool: asyncpg.pool.Pool):
         self._pool = pool
@@ -22,9 +23,12 @@ class DatabaseManager:
             try:
                 await table.create(self._pool, verbose=True)
             except Exception:
-                click.echo(f'Could not create table {table.__table_name__}\n{traceback.format_exc()}', err=True)
+                click.echo(
+                    f'Could not create table {table.__table_name__}\n{traceback.format_exc()}',
+                    err=True)
             else:
-                click.echo(f'[{table.__module__}] Created table \'{table.__table_name__}\'')
+                click.echo(
+                    f'[{table.__module__}] Created table \'{table.__table_name__}\'')
 
     async def execute(self, query: str, *args, **kwargs):
         return await self._pool.execute(query, *args, **kwargs)
@@ -35,9 +39,8 @@ class DatabaseManager:
     async def fetch_row(self, query: str, *args, **kwargs):
         return await self._pool.fetchrow(query, *args, **kwargs)
 
-
     @classmethod
-    async def from_dsn(cls, uri: str, *, loop: asyncio.AbstractEventLoop=None):
+    async def from_dsn(cls, uri: str, *, loop: asyncio.AbstractEventLoop = None):
         loop = loop or asyncio.get_event_loop()
         pool = await cls.create_pool(uri, loop=loop)
         return cls(pool)
@@ -55,6 +58,7 @@ class DatabaseManager:
 
         return await asyncpg.create_pool(uri, init=init, loop=loop)
 
+
 class SQLType:
     python: typing.Any = None
 
@@ -64,22 +68,26 @@ class SQLType:
     def is_real_type(self) -> bool:
         return True
 
+
 class String(SQLType):
     python = str
 
     def to_sql(self):
         return 'TEXT'
 
+
 class Integer(SQLType):
     python = int
 
-    def __init__(self, *, big: bool=False, small: bool=False, auto_increment: bool=False):
+    def __init__(self, *, big: bool = False, small: bool = False,
+                 auto_increment: bool = False):
         self.big = big
         self.small = small
         self.auto_increment = auto_increment
 
         if big and small:
-            raise SchemaError('Integer column type cannot be both big and small')
+            raise SchemaError(
+                'Integer column type cannot be both big and small')
 
     def is_real_type(self):
         return not self.auto_increment
@@ -91,7 +99,7 @@ class Integer(SQLType):
             if self.small:
                 return 'SMALLSERIAL'
             return 'SERIAL'
-        
+
         if self.big:
             return 'BIGINT'
 
@@ -100,10 +108,11 @@ class Integer(SQLType):
 
         return 'INTEGER'
 
+
 class Datetime(SQLType):
     python = datetime.datetime
 
-    def __init__(self, *, timezone: bool=False):
+    def __init__(self, *, timezone: bool = False):
         self.timezone = timezone
 
     def to_sql(self):
@@ -112,15 +121,17 @@ class Datetime(SQLType):
 
         return 'TIMESTAMP'
 
+
 class JSON(SQLType):
     python = None
 
     def to_sql(self):
         return 'JSONB'
 
+
 class ForeignKey(SQLType):
-    def __init__(self, table: str, column: str, *, sql_type: SQLType=None,
-                 on_delete: str='CASCADE', on_update: str='NO ACTION'):
+    def __init__(self, table: str, column: str, *, sql_type: SQLType = None,
+                 on_delete: str = 'CASCADE', on_update: str = 'NO ACTION'):
 
         if not table or not isinstance(table, str):
             raise SchemaError('missing table to reference (must be string)')
@@ -169,14 +180,15 @@ class ForeignKey(SQLType):
               ' ON DELETE {0.on_delete} ON UPDATE {0.on_update}'
         return fmt.format(self)
 
+
 class Column:
     __slots__ = (
         'column_type', 'index', 'primary_key', 'nullable',
         'default', 'unique', 'name', 'index_name'
     )
 
-    def __init__(self, column_type: SQLType, *, index: bool=False, primary_key: bool=False,
-                 nullable: bool=False, unique: bool=False, default: typing.Any=None, name: str=None):
+    def __init__(self, column_type: SQLType, *, index: bool = False, primary_key: bool = False,
+                 nullable: bool = False, unique: bool = False, default: typing.Any = None, name: str = None):
 
         if inspect.isclass(column_type):
             column_type = column_type()
@@ -194,7 +206,8 @@ class Column:
         self.index_name = None
 
         if sum(map(bool, (unique, primary_key, default is not None))) > 1:
-            raise SchemaError('\'unique\', \'primary_key\' and \'default\' are mutually exclusive')
+            raise SchemaError(
+                '\'unique\', \'primary_key\' and \'default\' are mutually exclusive')
 
     def _create_table(self) -> str:
         builder = []
@@ -205,7 +218,8 @@ class Column:
         if default is not None:
             builder.append('DEFAULT')
 
-            if isinstance(default, str) and isinstance(self.column_type, String):
+            if isinstance(default, str) and isinstance(
+                    self.column_type, String):
                 builder.append('\'%s\'' % default)
             elif isinstance(default, bool):
                 builder.append(str(default).upper())
@@ -213,15 +227,17 @@ class Column:
                 builder.append('(%s)' % default)
         elif self.unique:
             builder.append('UNIQUE')
-        
+
         if not self.nullable:
             builder.append('NOT NULL')
 
         return ' '.join(builder)
 
+
 class PrimaryKeyColumn(Column):
     def __init__(self):
         super().__init__(Integer(auto_increment=True), primary_key=True)
+
 
 class TableMeta(type):
     @classmethod
@@ -243,7 +259,7 @@ class TableMeta(type):
 
             if value.index:
                 value.index_name = '%s_%s_idx' % (table_name, value.name)
-            
+
             columns.append(value)
 
         dct['columns'] = columns
@@ -252,9 +268,10 @@ class TableMeta(type):
     def __init__(self, name, parents, dct, **kwargs):
         super().__init__(name, parents, dct)
 
+
 class Table(metaclass=TableMeta):
     @classmethod
-    async def create(cls, pool: asyncpg.pool.Pool, *, verbose: bool=False):
+    async def create(cls, pool: asyncpg.pool.Pool, *, verbose: bool = False):
         '''Cria o banco de dados.'''
         sql = cls.create_table(exists_ok=True)
         if verbose:
@@ -263,7 +280,7 @@ class Table(metaclass=TableMeta):
         await pool.execute(sql)
 
     @classmethod
-    def create_table(cls, *, exists_ok: bool=True) -> str:
+    def create_table(cls, *, exists_ok: bool = True) -> str:
         '''Gera uma query CREATE TABLE.'''
         statements = []
         builder = ['CREATE TABLE']
@@ -283,14 +300,17 @@ class Table(metaclass=TableMeta):
                 primary_keys.append(column.name)
 
         if primary_keys:
-            column_creations.append('PRIMARY KEY (%s)' % ', '.join(primary_keys))
-            
+            column_creations.append(
+                'PRIMARY KEY (%s)' %
+                ', '.join(primary_keys))
+
         builder.append('(%s)' % ', '.join(column_creations))
         statements.append(' '.join(builder) + ';')
 
         for column in cls.columns:
             if column.index:
-                fmt = 'CREATE INDEX IF NOT EXISTS {1.index_name} ON {0} ({1.name});'.format(cls.__table_name__, column)
+                fmt = 'CREATE INDEX IF NOT EXISTS {1.index_name} ON {0} ({1.name});'.format(
+                    cls.__table_name__, column)
                 statements.append(fmt)
 
         return '\n'.join(statements)

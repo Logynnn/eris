@@ -27,8 +27,9 @@ for root, _, files in os.walk('extensions'):
             continue
 
         # regex é um ser muito estranho.
-        extension = re.sub('\\\\|\/', '.', path)
+        extension = re.sub(r'\\|\/', '.', path)
         all_extensions.append(extension)
+
 
 class Bellatrix(commands.Bot):
     def __init__(self):
@@ -38,12 +39,16 @@ class Bellatrix(commands.Bot):
     @property
     def cosmic(self) -> discord.Guild:
         return self.get_guild(COSMIC_GUILD_ID)
-        
+
     async def on_ready(self):
         self.staff_role = self.cosmic.get_role(STAFF_ROLE_ID)
         self.general_channel = self.cosmic.get_channel(GENERAL_CHANNEL_ID)
 
-        self._image_url_regex = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\.(?:jpg|jpeg|png|gif|webp)$', re.VERBOSE)
+        self._image_url_regex = re.compile(
+            r'''http[s]?://
+            (?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))
+            +\.(?:jpg|jpeg|png|gif|webp)$''',
+            re.VERBOSE)
         self._emoji_regex = re.compile(r'<:(\w+):(\d+)>')
 
         self.load_extension('jishaku')
@@ -52,7 +57,8 @@ class Bellatrix(commands.Bot):
             try:
                 self.load_extension(ext)
             except Exception:
-                self.logger.exception(f'Extension \'{ext}\' could not be loaded.')
+                self.logger.exception(
+                    f'Extension \'{ext}\' could not be loaded.')
             else:
                 self.logger.info(f'Extension \'{ext}\' has been loaded.')
 

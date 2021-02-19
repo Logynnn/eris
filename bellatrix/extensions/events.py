@@ -4,6 +4,7 @@ from discord.ext import commands
 
 NITRO_BOOSTER_ROLE_ID = 804077079788257300
 
+
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -28,6 +29,7 @@ class Events(commands.Cog):
             )
 
             await general_channel.send(embed=embed)
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(Events(bot))

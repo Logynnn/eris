@@ -22,11 +22,13 @@ LEVEL_ROLES = (
     799367386695991407
 )
 
+
 class LevelsTable(database.Table, table_name='levels'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
 
     exp = database.Column(database.Integer(big=True))
     last_message = database.Column(database.Datetime)
+
 
 class Levels(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -81,7 +83,9 @@ class Levels(commands.Cog):
         self._cache = {}
 
         for record in fetch:
-            data = {'exp': record['exp'], 'last_message': record['last_message']}
+            data = {
+                'exp': record['exp'],
+                'last_message': record['last_message']}
             self._cache[record['user_id']] = data
 
     async def get_profile(self, member: discord.Member):
@@ -151,7 +155,9 @@ class Levels(commands.Cog):
             rewards = await self.update_rewards(author)
             if rewards:
                 roles = [role.mention for role in rewards]
-                messages.append('Ao subir neste nível você recebeu %s.' % ', '.join(roles))
+                messages.append(
+                    'Ao subir neste nível você recebeu %s.' %
+                    ', '.join(roles))
 
             embed = Embed(
                 description='\n'.join(messages),
@@ -160,6 +166,7 @@ class Levels(commands.Cog):
             )
 
             await message.channel.send(author.mention, embed=embed)
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(Levels(bot))

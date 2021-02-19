@@ -1,7 +1,8 @@
 import discord
 
 
-# Isso é um construtor customizado para ``Embed``s. Serve pra facilitar a criação dos mesmos.
+# Isso é um construtor customizado para ``Embed``s. Serve pra facilitar a
+# criação dos mesmos.
 class Embed(discord.Embed):
     def __init__(self, **kwargs):
         options = {

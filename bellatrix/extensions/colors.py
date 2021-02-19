@@ -14,10 +14,12 @@ class ColorConverter(commands.Converter):
 
         return color if color in ctx.cog.colors else None
 
+
 class Colors(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.colors = [role for role in bot.cosmic.roles if role.name.startswith('「🎨」')]
+        self.colors = [
+            role for role in bot.cosmic.roles if role.name.startswith('「🎨」')]
 
     @commands.group(aliases=['colour'], invoke_without_command=True)
     async def color(self, ctx: commands.Context, *, color: ColorConverter):
@@ -52,6 +54,7 @@ class Colors(commands.Cog):
 
         menu = Menu(roles, per_page=12)
         await menu.start(ctx)
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(Colors(bot))

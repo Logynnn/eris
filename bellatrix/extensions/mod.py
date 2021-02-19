@@ -17,9 +17,11 @@ from .reminder import Timer
 LOG_CHANNEL_ID = 798013309617176587
 MUTE_ROLE_ID = 799064942048444437
 
+
 class PunishmentImage(database.Table, table_name='punishment_images'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
     url = database.Column(database.String())
+
 
 class Mod(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -32,7 +34,7 @@ class Mod(commands.Cog):
     async def get_punishment_image(self, member: discord.Member):
         query = 'SELECT url FROM punishment_images WHERE user_id = $1'
         fetch = await self.bot.manager.fetch_row(query, member.id)
-        
+
         if not fetch:
             return None
 
@@ -104,10 +106,18 @@ class Mod(commands.Cog):
         )
 
         image = await self.get_punishment_image(ctx.author)
-        delta = humanize.precisedelta(when.datetime - ctx.message.created_at, format='%0.0f')
+        delta = humanize.precisedelta(
+            when.datetime -
+            ctx.message.created_at,
+            format='%0.0f')
 
         await ctx.reply(title=f'{member} foi silenciado por {delta}', image=image)
-        self.bot.dispatch('moderation_command', 'mute', ctx, member, duration=delta)
+        self.bot.dispatch(
+            'moderation_command',
+            'mute',
+            ctx,
+            member,
+            duration=delta)
 
     @flags.command(aliases=['purge'])
     @flags.add_flag('--user', type=discord.User, nargs='+')
@@ -115,14 +125,18 @@ class Mod(commands.Cog):
     @flags.add_flag('--starts', type=str, nargs='+')
     @flags.add_flag('--ends', type=str, nargs='+')
     @flags.add_flag('--emoji', action='store_true')
-    @flags.add_flag('--bot', action='store_const', const=lambda m: m.author.bot)
-    @flags.add_flag('--embeds', action='store_const', const=lambda m: len(m.embeds))
-    @flags.add_flag('--files', action='store_const', const=lambda m: len(m.attachments))
-    @flags.add_flag('--reactions', action='store_const', const=lambda m: len(m.reactions))
+    @flags.add_flag('--bot', action='store_const',
+                    const=lambda m: m.author.bot)
+    @flags.add_flag('--embeds', action='store_const',
+                    const=lambda m: len(m.embeds))
+    @flags.add_flag('--files', action='store_const',
+                    const=lambda m: len(m.attachments))
+    @flags.add_flag('--reactions', action='store_const',
+                    const=lambda m: len(m.reactions))
     @flags.add_flag('--after', type=int)
     @flags.add_flag('--before', type=int)
     @commands.has_guild_permissions(manage_messages=True)
-    async def clear(self, ctx: commands.Context, amount: int=100, **flags):
+    async def clear(self, ctx: commands.Context, amount: int = 100, **flags):
         predicates = []
         amount = max(0, min(2000, amount))
 
@@ -130,16 +144,22 @@ class Mod(commands.Cog):
             predicates.append(lambda m: m.author in flags['user'])
 
         if flags['contains']:
-            predicates.append(lambda m: any(sub in m.content for sub in flags['contains']))
+            predicates.append(
+                lambda m: any(
+                    sub in m.content for sub in flags['contains']))
 
         if flags['starts']:
-            predicates.append(lambda m: any(m.content.startswith(s) for s in flags['starts']))
+            predicates.append(lambda m: any(m.content.startswith(s)
+                                            for s in flags['starts']))
 
         if flags['ends']:
-            predicates.append(lambda m: any(m.content.endswith(s) for s in flags['ends']))
+            predicates.append(lambda m: any(m.content.endswith(s)
+                                            for s in flags['ends']))
 
         if flags['emoji']:
-            predicates.append(lambda m: self.bot._emoji_regex.search(m.content))
+            predicates.append(
+                lambda m: self.bot._emoji_regex.search(
+                    m.content))
 
         if flags['bot']:
             predicates.append(flags['bot'])
@@ -173,7 +193,7 @@ class Mod(commands.Cog):
     async def embed(self, ctx: commands.Context, *, code: codeblock_converter):
         code = code.content.replace('{color}', str(ctx.guild.me.color.value))
         embed = Embed.from_dict(json.loads(code))
-        
+
         await ctx.send(embed=embed)
 
     @commands.Cog.listener()
@@ -211,7 +231,8 @@ class Mod(commands.Cog):
         embed = Embed(
             title=f'Usuário {term}',
             thumbnail=member.avatar_url,
-            author={'name': str(ctx.author), 'icon_url': ctx.author.avatar_url},
+            author={'name': str(ctx.author),
+                    'icon_url': ctx.author.avatar_url},
             color=self.cosmic.me.color
         )
 
@@ -223,6 +244,7 @@ class Mod(commands.Cog):
             embed.add_field(name='Duração', value=duration, inline=False)
 
         await self.log_channel.send(embed=embed)
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(Mod(bot))

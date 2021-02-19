@@ -25,6 +25,7 @@ class RemoveNoise(logging.Filter):
 
         return True
 
+
 @contextlib.contextmanager
 def setup_logging():
     # Criar a past logs/ antes de inicializar o logger.
@@ -43,8 +44,14 @@ def setup_logging():
 
         datetime_format = '%Y-%m-%d %H:%M:%S'
 
-        handler = logging.FileHandler(filename='logs/bellatrix.log', mode='w', encoding='utf-8')
-        formatter = logging.Formatter('[{asctime}] [{levelname}] {name}: {message}', datetime_format, style='{')
+        handler = logging.FileHandler(
+            filename='logs/bellatrix.log',
+            mode='w',
+            encoding='utf-8')
+        formatter = logging.Formatter(
+            '[{asctime}] [{levelname}] {name}: {message}',
+            datetime_format,
+            style='{')
 
         handler.setFormatter(formatter)
         logger.addHandler(handler)
@@ -56,6 +63,7 @@ def setup_logging():
             handler.close()
             logger.removeHandler(handler)
 
+
 def run_bot():
     humanize.activate('pt_BR')
 
@@ -65,6 +73,7 @@ def run_bot():
     bot.manager = run(DatabaseManager.from_dsn(config.postgres, loop=bot.loop))
     bot.run(config.token)
 
+
 @click.group(invoke_without_command=True, options_metavar='[options]')
 @click.pass_context
 def main(ctx: click.Context):
@@ -73,11 +82,14 @@ def main(ctx: click.Context):
         with setup_logging():
             run_bot()
 
+
 @main.group(short_help='coisas do banco de dados', options_metavar='[options]')
 def db():
     pass
 
-@db.command(short_help='inicializa o banco de dados', options_metavar='[options]')
+
+@db.command(short_help='inicializa o banco de dados',
+            options_metavar='[options]')
 @click.option('-q', '--quiet', help='output menos detalhado', is_flag=True)
 def init(quiet: bool):
     '''Faz a criação do banco de dados para você.'''
@@ -87,15 +99,18 @@ def init(quiet: bool):
     try:
         manager = run(DatabaseManager.from_dsn(config.postgres, loop=loop))
     except Exception:
-        return click.echo(f'Could not create PostgreSQL connection pool\n{traceback.format_exc()}', err=True)
+        return click.echo(
+            f'Could not create PostgreSQL connection pool\n{traceback.format_exc()}', err=True)
 
     for ext in all_extensions:
         try:
             importlib.import_module(ext)
         except Exception:
-            return click.echo(f'Could not load {ext}\n{traceback.format_exc()}', err=True)
+            return click.echo(
+                f'Could not load {ext}\n{traceback.format_exc()}', err=True)
 
     run(manager.initialize())
+
 
 if __name__ == '__main__':
     main()

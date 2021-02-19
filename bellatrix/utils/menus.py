@@ -23,6 +23,7 @@ class _MenuPagesBase(menus.MenuPages):
 
         await super().update(payload)
 
+
 class ConfirmMenu(_MenuBase):
     def __init__(self, content: str):
         super().__init__(delete_message_after=True)
@@ -47,8 +48,9 @@ class ConfirmMenu(_MenuBase):
 
         if self.result is None:
             await ctx.reply('Você demorou muito para responder.')
-        
+
         return self.result
+
 
 class PunishmentMenu(_MenuBase):
     def __init__(self):
@@ -88,23 +90,32 @@ class PunishmentMenu(_MenuBase):
         await self.start(ctx, wait=True)
         return self.reason
 
+
 class ListPaginator(menus.ListPageSource):
-    def __init__(self, data, per_page: int=8):
+    def __init__(self, data, per_page: int = 8):
         super().__init__(data, per_page=per_page)
 
     async def format_page(self, menu: _MenuBase, entries):
-        footer = {'text': f'Página {menu.current_page + 1}/{self.get_max_pages()}'}
+        footer = {
+            'text': f'Página {menu.current_page + 1}/{self.get_max_pages()}'}
         return menu.ctx.get_embed('\n'.join(entries), footer=footer)
 
+
 class FieldPaginator(menus.ListPageSource):
-    def __init__(self, data, per_page: int=8):
+    def __init__(self, data, per_page: int = 8):
         super().__init__(data, per_page=per_page)
 
     async def format_page(self, menu: _MenuBase, entries):
-        footer = {'text': f'Página {menu.current_page + 1}/{self.get_max_pages()}'}
+        footer = {
+            'text': f'Página {menu.current_page + 1}/{self.get_max_pages()}'}
         return menu.ctx.get_embed(fields=entries, footer=footer)
 
+
 class Menu(_MenuPagesBase):
-    def __init__(self, data, *, paginator_type: int=0, per_page: int=8):
+    def __init__(self, data, *, paginator_type: int = 0, per_page: int = 8):
         _types = [ListPaginator, FieldPaginator]
-        super().__init__(_types[paginator_type](data, per_page=per_page), delete_message_after=True)
+        super().__init__(
+            _types[paginator_type](
+                data,
+                per_page=per_page),
+            delete_message_after=True)
