@@ -277,6 +277,9 @@ class Guilds(commands.Cog):
         '''
         fetch = await self.bot.manager.fetch(query)
 
+        if not fetch:
+            return await ctx.reply('Não há nenhuma guilda.')
+
         data = []
         for record in fetch:
             name = record['name']
