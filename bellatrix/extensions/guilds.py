@@ -237,6 +237,32 @@ class Guilds(commands.Cog):
         await guild.role.edit(color=color, reason=reason)
         await ctx.reply(f'Você alterou a cor da sua guilda para `{hex_color}`', color=color.value)
 
+    @guild.command(name='invite')
+    @commands.cooldown(1, 600, commands.BucketType.user)
+    async def guild_invite(self, ctx: commands.Context, member: discord.Member):
+        guild = await self.get_guild(ctx, ctx.author.id)
+        if not guild:
+            return await ctx.reply('Você não possui uma guilda.')
+
+
+        if await self.has_guild(member.id):
+            return await ctx.reply('Este usuário já possui uma guilda.')
+
+        # using some hacks here
+        ctx.author = member
+
+        result = await ctx.prompt(f'Você deseja entrar na guilda `{guild.name}`?')
+        if not result:
+            return
+
+        query = '''
+            INSERT INTO guild_members (user_id, guild_id)
+            VALUES ($1, $2)
+        '''
+        await self.bot.manager.execute(query, member.id, guild.id)
+
+        await ctx.reply(f'Você entrou na guilda `{guild.name}`.')
+
     @guild.command(name='info')
     async def guild_info(self, ctx: commands.Context, *, guild: GuildConverter = None):
         guild = guild or await self.get_guild(ctx, ctx.author.id)
