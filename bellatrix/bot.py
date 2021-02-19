@@ -43,11 +43,8 @@ class Bellatrix(commands.Bot):
         self.staff_role = self.cosmic.get_role(STAFF_ROLE_ID)
         self.general_channel = self.cosmic.get_channel(GENERAL_CHANNEL_ID)
 
-        self._image_url_regex = re.compile(r'''
-            http[s]?://
-            (?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+
-            \.(?:jpg|jpeg|png|gif|webp)$
-        ''', re.VERBOSE)
+        self._image_url_regex = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\.(?:jpg|jpeg|png|gif|webp)$', re.VERBOSE)
+        self._emoji_regex = re.compile(r'<:(\w+):(\d+)>')
 
         self.load_extension('jishaku')
 

@@ -3,7 +3,7 @@ import re
 
 import discord
 import humanize
-from discord.ext import commands
+from discord.ext import commands, flags
 
 from utils import database
 from utils.menus import PunishmentMenu
@@ -106,6 +106,66 @@ class Mod(commands.Cog):
 
         await ctx.reply(title=f'{member} foi silenciado por {delta}', image=image)
         self.bot.dispatch('moderation_command', 'mute', ctx, member, duration=delta)
+
+    @flags.command(aliases=['purge'])
+    @flags.add_flag('--user', type=discord.User, nargs='+')
+    @flags.add_flag('--contains', type=str, nargs='+')
+    @flags.add_flag('--starts', type=str, nargs='+')
+    @flags.add_flag('--ends', type=str, nargs='+')
+    @flags.add_flag('--emoji', action='store_true')
+    @flags.add_flag('--bot', action='store_const', const=lambda m: m.author.bot)
+    @flags.add_flag('--embeds', action='store_const', const=lambda m: len(m.embeds))
+    @flags.add_flag('--files', action='store_const', const=lambda m: len(m.attachments))
+    @flags.add_flag('--reactions', action='store_const', const=lambda m: len(m.reactions))
+    @flags.add_flag('--after', type=int)
+    @flags.add_flag('--before', type=int)
+    @commands.has_guild_permissions(manage_messages=True)
+    async def clear(self, ctx: commands.Context, amount: int=100, **flags):
+        predicates = []
+        amount = max(0, min(2000, amount))
+
+        if flags['user']:
+            predicates.append(lambda m: m.author in flags['user'])
+
+        if flags['contains']:
+            predicates.append(lambda m: any(sub in m.content for sub in flags['contains']))
+
+        if flags['starts']:
+            predicates.append(lambda m: any(m.content.startswith(s) for s in flags['starts']))
+
+        if flags['ends']:
+            predicates.append(lambda m: any(m.content.endswith(s) for s in flags['ends']))
+
+        if flags['emoji']:
+            predicates.append(lambda m: self.bot._emoji_regex.search(m.content))
+
+        if flags['bot']:
+            predicates.append(flags['bot'])
+
+        if flags['embeds']:
+            predicates.append(flags['embeds'])
+
+        if flags['files']:
+            predicates.append(flags['files'])
+
+        if flags['reactions']:
+            predicates.append(flags['reactions'])
+
+        if flags['before']:
+            before = discord.Object(id=flags['before'])
+        else:
+            before = ctx.message
+
+        if flags['after']:
+            after = discord.Object(id=flags['after'])
+        else:
+            after = None
+
+        def predicate(m: discord.Message) -> bool:
+            return all(pred(m) for pred in predicates)
+
+        deleted = await ctx.channel.purge(limit=amount, before=before, after=after, check=predicate)
+        await ctx.reply(f'Removi `{len(deleted)}` mensagens com sucesso.')
 
     @commands.Cog.listener()
     async def on_mute_complete(self, timer: Timer):

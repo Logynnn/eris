@@ -7,3 +7,4 @@ unidecode
 python-dateutil
 humanize
 jishaku
+discord-flags
