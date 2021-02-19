@@ -11,6 +11,18 @@ class Events(commands.Cog):
         self.nitro_booster_role = bot.cosmic.get_role(NITRO_BOOSTER_ROLE_ID)
 
     @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        guild = member.guild
+
+        embed = discord.Embed(
+            title='Um membro entrou no servidor!',
+            description=f'{member.mention} entrou no servidor! ❤️\n\nNão se esqueça de ler as <#795029002225451048>!',
+            color=guild.me.color
+        )
+
+        await self.bot.general_channel.send(member.mention, embed=embed)
+
+    @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if before.roles == after.roles:
             return
