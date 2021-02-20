@@ -250,13 +250,10 @@ class Mod(commands.Cog):
         term = terms[name]
         duration = kwargs.get('duration', None)
 
-        embed = Embed(
-            title=f'Usuário {term}',
-            thumbnail=member.avatar_url,
-            author={'name': str(ctx.author),
-                    'icon_url': ctx.author.avatar_url},
-            color=ctx.bot.color
-        )
+        embed = Embed(title=f'Usuário {term}', color=ctx.bot.color)
+
+        embed.set_thumbnail(url=member.avatar_url)
+        embed.set_author(name=str(ctx.author), icon_url=ctx.author.avatar_url)
 
         embed.add_field(name='Usuário', value=str(member), inline=False)
         embed.add_field(name='ID', value=f'`{member.id}`', inline=False)
