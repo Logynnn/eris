@@ -85,8 +85,8 @@ class Starrers(database.Table):
 class Starboard(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-
         self.cosmic = bot.cosmic
+
         self.starboard = bot.cosmic.get_channel(
             bot.constants.STARBOARD_CHANNEL_ID)
 

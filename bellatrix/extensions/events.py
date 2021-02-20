@@ -30,6 +30,9 @@ class Events(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+        self.general_channel = bot.general_channel
+        self.nitro_booster_role = bot.nitro_booster_role
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         guild = member.guild
@@ -40,18 +43,17 @@ class Events(commands.Cog):
             color=self.bot.color
         )
 
-        await self.bot.general_channel.send(member.mention, embed=embed)
+        await self.general_channel.send(member.mention, embed=embed)
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if before.roles == after.roles:
             return
 
-        has_boosted_before = self.bot.nitro_booster_role in before.roles
-        has_boosted_after = self.bot.nitro_booster_role in after.roles
+        has_boosted_before = self.nitro_booster_role in before.roles
+        has_boosted_after = self.nitro_booster_role in after.roles
 
         if not has_boosted_before and has_boosted_after:
-            general_channel = self.bot.general_channel
             guild = after.guild
 
             embed = discord.Embed(
@@ -60,7 +62,7 @@ class Events(commands.Cog):
                 color=self.nitro_booster_role.color
             )
 
-            await general_channel.send(embed=embed)
+            await self.general_channel.send(embed=embed)
 
 
 def setup(bot: commands.Bot):

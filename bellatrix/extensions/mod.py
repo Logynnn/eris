@@ -48,6 +48,10 @@ class Mod(commands.Cog):
         self.bot = bot
         self.cosmic = bot.cosmic
 
+        self.staff_role = bot.staff_role
+        self.mute_role = bot.mute_role
+        self.log_channel = bot.log_channel
+
     async def get_punishment_image(self, member: discord.Member):
         query = 'SELECT url FROM punishment_images WHERE user_id = $1'
         fetch = await self.bot.manager.fetch_row(query, member.id)
@@ -110,10 +114,10 @@ class Mod(commands.Cog):
         if not reminder:
             return await ctx.reply('Serviço indisponível, tente novamente mais tarde.')
 
-        if self.bot.staff_role in member.roles:
+        if self.staff_role in member.roles:
             return await ctx.reply('Não foi possível silenciar este usuário.')
 
-        await member.add_roles(self.bot.mute_role, reason=f'Ação realizada por {ctx.author} (ID: {ctx.author.id}')
+        await member.add_roles(self.mute_role, reason=f'Ação realizada por {ctx.author} (ID: {ctx.author.id}')
         timer = await reminder.create_timer(
             when.datetime,
             'mute',
@@ -227,7 +231,7 @@ class Mod(commands.Cog):
         reason = f'Removendo silenciamento realizado por {moderator}'
 
         try:
-            await member.remove_roles(self.bot.mute_role, reason=reason)
+            await member.remove_roles(self.mute_role, reason=reason)
         except discord.HTTPException:
             pass
 
@@ -242,7 +246,7 @@ class Mod(commands.Cog):
         menu = PunishmentMenu()
         reason = await menu.prompt(ctx)
 
-        channel = self.bot.log_channel
+        channel = self.log_channel
 
         term = terms[name]
         duration = kwargs.get('duration', None)

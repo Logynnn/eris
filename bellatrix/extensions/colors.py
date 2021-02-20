@@ -42,8 +42,10 @@ class ColorConverter(commands.Converter):
 class Colors(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.colors = [
-            role for role in bot.cosmic.roles if role.name.startswith('「🎨」')]
+
+        self.cosmic = bot.cosmic
+
+        self.colors = [role for role in cosmic.roles if role.name.startswith('「🎨」')]
 
     @commands.group(aliases=['colour'], invoke_without_command=True)
     async def color(self, ctx: commands.Context, *, color: ColorConverter):

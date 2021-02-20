@@ -41,6 +41,8 @@ class Rewards(commands.Cog):
         self.bot = bot
         self.cosmic = bot.cosmic
 
+        self.general_channel = bot.general_channel
+
         self.give_rewards.start()
 
     def cog_unload(self):
