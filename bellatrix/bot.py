@@ -55,6 +55,10 @@ class Bellatrix(commands.Bot):
         return self.cosmic.get_role(self.constants.STAFF_ROLE_ID)
 
     @property
+    def administrator_role(self) -> discord.Role:
+        return self.cosmic.get_role(self.constants.ADMINISTRATOR_ROLE_ID)
+
+    @property
     def nitro_booster_role(self) -> discord.Role:
         return self.cosmic.get_role(self.constants.NITRO_BOOSTER_ROLE_ID)
 
