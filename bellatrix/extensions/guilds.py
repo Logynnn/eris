@@ -109,7 +109,8 @@ class Guilds(commands.Cog):
 
     @property
     def separator_role(self) -> discord.Role:
-        return self.bot.cosmic.get_role(self.bot.constants.GUILD_SEPARATOR_ROLE_ID)
+        return self.bot.cosmic.get_role(
+            self.bot.constants.GUILD_SEPARATOR_ROLE_ID)
 
     async def has_guild(self, user_id: int) -> bool:
         query = 'SELECT * FROM guild_members WHERE user_id = $1'
@@ -264,7 +265,6 @@ class Guilds(commands.Cog):
         guild = await self.get_guild(ctx, ctx.author.id)
         if not guild:
             return await ctx.reply('Você não possui uma guilda.')
-
 
         if await self.has_guild(member.id):
             return await ctx.reply('Este usuário já possui uma guilda.')

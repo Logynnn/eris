@@ -87,7 +87,8 @@ class Starboard(commands.Cog):
         self.bot = bot
 
         self.cosmic = bot.cosmic
-        self.starboard = bot.cosmic.get_channel(bot.constants.STARBOARD_CHANNEL_ID)
+        self.starboard = bot.cosmic.get_channel(
+            bot.constants.STARBOARD_CHANNEL_ID)
 
         self.spoilers = re.compile(r'\|\|(.+?)\|\|')
 
