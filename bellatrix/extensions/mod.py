@@ -52,6 +52,9 @@ class Mod(commands.Cog):
         self.mute_role = bot.mute_role
         self.log_channel = bot.log_channel
 
+    async def cog_check(self, ctx: commands.Context):
+        return ctx.bot.staff_role in ctx.author.roles
+
     async def get_punishment_image(self, member: discord.Member):
         query = 'SELECT url FROM punishment_images WHERE user_id = $1'
         fetch = await self.bot.manager.fetch_row(query, member.id)
@@ -82,7 +85,6 @@ class Mod(commands.Cog):
         await ctx.reply('Você mudou sua imagem de banimento com sucesso.')
 
     @commands.command(aliases=['b'])
-    @commands.has_guild_permissions(ban_members=True)
     async def ban(self, ctx: commands.Context, *, member: discord.Member):
         image = await self.get_punishment_image(ctx.author)
 
@@ -95,7 +97,6 @@ class Mod(commands.Cog):
             self.bot.dispatch('moderation_command', 'ban', ctx, member)
 
     @commands.command(aliases=['k'])
-    @commands.has_guild_permissions(kick_members=True)
     async def kick(self, ctx: commands.Context, *, member: discord.Member):
         image = await self.get_punishment_image(ctx.author)
 
@@ -108,7 +109,6 @@ class Mod(commands.Cog):
             self.bot.dispatch('moderation_command', 'kick', ctx, member)
 
     @commands.command(aliases=['m'])
-    @commands.has_guild_permissions(mute_members=True)
     async def mute(self, ctx: commands.Context, member: discord.Member, *, when: FutureTime):
         reminder = ctx.bot.get_cog('Reminder')
         if not reminder:
@@ -156,7 +156,6 @@ class Mod(commands.Cog):
                     const=lambda m: len(m.reactions))
     @flags.add_flag('--after', type=int)
     @flags.add_flag('--before', type=int)
-    @commands.has_guild_permissions(manage_messages=True)
     async def clear(self, ctx: commands.Context, amount: int = 100, **flags):
         predicates = []
         amount = max(0, min(2000, amount))
