@@ -28,60 +28,60 @@ from discord.ext import commands
 from utils.menus import Menu
 
 
-class ColorConverter(commands.Converter):
+class ColourConverter(commands.Converter):
     async def convert(self, ctx: commands.Context, argument: str):
         name = '「🎨」' + argument.capitalize()
-        color = discord.utils.get(ctx.guild.roles, name=name)
+        colour = discord.utils.get(ctx.guild.roles, name=name)
 
-        if not color:
+        if not colour:
             return None
 
-        return color if color in ctx.cog.colors else None
+        return colour if colour in ctx.cog.colours else None
 
 
-class Colors(commands.Cog):
+class Colours(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.colors = [r for r in bot.cosmic.roles if r.name.startswith('「🎨」')]
+        self.colours = [r for r in bot.cosmic.roles if r.name.startswith('「🎨」')]
 
-    @commands.group(aliases=['colour'], invoke_without_command=True)
-    async def color(self, ctx: commands.Context, *, color: ColorConverter):
-        await self.color_add(ctx, color=color)
+    @commands.group(aliases=['color'], invoke_without_command=True)
+    async def colour(self, ctx: commands.Context, *, colour: ColourConverter):
+        await self.colour_add(ctx, colour=colour)
 
-    @color.command(name='add')
-    async def color_add(self, ctx: commands.Context, *, color: ColorConverter):
-        if not color:
+    @colour.command(name='add')
+    async def colour_add(self, ctx: commands.Context, *, colour: ColourConverter):
+        if not colour:
             return await ctx.reply('Cor não encontrada.')
 
-        if color in ctx.author.roles:
+        if colour in ctx.author.roles:
             return await ctx.reply('Você já está com esta cor.')
 
         to_remove = []
         for role in ctx.author.roles:
-            if role in self.colors:
+            if role in self.colours:
                 to_remove.append(role)
 
         await ctx.author.remove_roles(*to_remove, reason='Removendo cores anteriores')
-        await ctx.author.add_roles(color, reason='Adicionando uma cor')
+        await ctx.author.add_roles(colour, reason='Adicionando uma cor')
 
-        message = f'Cor {color.mention} adicionada.'
+        message = f'Cor {colour.mention} adicionada.'
         if to_remove:
             mentions = ', '.join([role.mention for role in to_remove])
             message += f'\nAs seguintes cores foram removidas: {mentions}'
 
         await ctx.reply(message)
 
-    @color.command(name='list')
-    async def color_list(self, ctx: commands.Context):
-        roles = [role.mention for role in self.colors]
+    @colour.command(name='list')
+    async def colour_list(self, ctx: commands.Context):
+        colours = [role.mention for role in self.colours]
 
-        menu = Menu(roles, per_page=12)
+        menu = Menu(colours, per_page=12)
         await menu.start(ctx)
 
-    @commands.command(aliases=['colours'])
-    async def colors(self, ctx: commands.Context):
-        await self.color_list(ctx)
+    @commands.command(aliases=['colors'])
+    async def colours(self, ctx: commands.Context):
+        await self.colour_list(ctx)
 
 
 def setup(bot: commands.Bot):
-    bot.add_cog(Colors(bot))
+    bot.add_cog(Colours(bot))
