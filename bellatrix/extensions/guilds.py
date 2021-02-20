@@ -33,9 +33,6 @@ from utils.menus import Menu
 from utils import checks
 
 
-GUILD_SEPARATOR_ROLE_ID = 804026477745143808
-
-
 class GuildsTable(database.Table, table_name='guilds'):
     id = database.PrimaryKeyColumn()
     name = database.Column(database.String, index=True, unique=True)
@@ -112,7 +109,7 @@ class Guilds(commands.Cog):
 
     @property
     def separator_role(self) -> discord.Role:
-        return self.bot.cosmic.get_role(GUILD_SEPARATOR_ROLE_ID)
+        return self.bot.cosmic.get_role(self.bot.constants.GUILD_SEPARATOR_ROLE_ID)
 
     async def has_guild(self, user_id: int) -> bool:
         query = 'SELECT * FROM guild_members WHERE user_id = $1'

@@ -26,13 +26,9 @@ import discord
 from discord.ext import commands
 
 
-NITRO_BOOSTER_ROLE_ID = 804077079788257300
-
-
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.nitro_booster_role = bot.cosmic.get_role(NITRO_BOOSTER_ROLE_ID)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
@@ -41,7 +37,7 @@ class Events(commands.Cog):
         embed = discord.Embed(
             title='Um membro entrou no servidor!',
             description=f'{member.mention} entrou no servidor! ❤️\n\nNão se esqueça de ler as <#795029002225451048>!',
-            color=guild.me.color
+            color=self.bot.color
         )
 
         await self.bot.general_channel.send(member.mention, embed=embed)
@@ -51,8 +47,8 @@ class Events(commands.Cog):
         if before.roles == after.roles:
             return
 
-        has_boosted_before = self.nitro_booster_role in before.roles
-        has_boosted_after = self.nitro_booster_role in after.roles
+        has_boosted_before = self.bot.nitro_booster_role in before.roles
+        has_boosted_after = self.bot.nitro_booster_role in after.roles
 
         if not has_boosted_before and has_boosted_after:
             general_channel = self.bot.general_channel

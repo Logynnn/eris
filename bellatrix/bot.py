@@ -25,6 +25,7 @@ SOFTWARE.
 import os
 import re
 import logging
+import importlib
 
 import discord
 from discord.ext import commands
@@ -34,10 +35,6 @@ from utils.context import Context
 
 
 # TODO: Adicionar uma documentação decente.
-
-COSMIC_GUILD_ID = 795017809402921041
-STAFF_ROLE_ID = 795026574453899304
-GENERAL_CHANNEL_ID = 810910658458550303
 
 all_extensions = []
 for root, _, files in os.walk('extensions'):
@@ -62,13 +59,38 @@ class Bellatrix(commands.Bot):
         self.logger = logging.getLogger('bellatrix')
 
     @property
+    def constants(self):
+        return importlib.import_module('utils.constants')
+
+    @property
     def cosmic(self) -> discord.Guild:
-        return self.get_guild(COSMIC_GUILD_ID)
+        return self.get_guild(self.constants.COSMIC_GUILD_ID)
+
+    @property
+    def staff_role(self) -> discord.Role:
+        return self.cosmic.get_role(self.constants.STAFF_ROLE_ID)
+
+    @property
+    def nitro_booster_role(self) -> discord.Role:
+        return self.cosmic.get_role(self.constants.NITRO_BOOSTER_ROLE_ID)
+
+    @property
+    def mute_role(self) -> discord.Role:
+        return self.cosmic.get_role(self.constants.MUTE_ROLE_ID)
+
+    @property
+    def log_channel(self) -> discord.TextChannel:
+        return self.cosmic.get_channel(self.constants.LOG_CHANNEL_ID)
+
+    @property
+    def general_channel(self) -> discord.TextChannel:
+        return self.cosmic.get_channel(self.constants.GENERAL_CHANNEL_ID)
+
+    @property
+    def color(self) -> discord.Color:
+        return self.cosmic.me.color
 
     async def on_ready(self):
-        self.staff_role = self.cosmic.get_role(STAFF_ROLE_ID)
-        self.general_channel = self.cosmic.get_channel(GENERAL_CHANNEL_ID)
-
         self._image_url_regex = re.compile(
             r'''http[s]?://
             (?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))

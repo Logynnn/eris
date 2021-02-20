@@ -33,20 +33,6 @@ from utils.embed import Embed
 from utils.menus import Menu
 
 
-LEVEL_ROLES = (
-    799358067233521665,
-    799358068055474187,
-    799358069275623434,
-    799358070273605682,
-    799358071184425031,
-    799358072325144656,
-    799358073319194704,
-    799358074346274846,
-    799358846937464922,
-    799367386695991407
-)
-
-
 class LevelsTable(database.Table, table_name='levels'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
 
@@ -59,8 +45,8 @@ class Levels(commands.Cog):
         self.bot = bot
 
         self._level_roles = {}
-        for i, id_ in enumerate(LEVEL_ROLES, start=1):
-            self._level_roles[i * 10] = bot.cosmic.get_role(id_)
+        for index, role_id in enumerate(bot.constants.LEVEL_ROLES, start=1):
+            self._level_roles[index * 10] = bot.cosmic.get_role(role_id)
 
     @staticmethod
     def _get_level_exp(lvl: int) -> int:
@@ -186,7 +172,7 @@ class Levels(commands.Cog):
             embed = Embed(
                 description='\n'.join(messages),
                 author={'name': str(author), 'icon_url': author.avatar_url},
-                color=message.guild.me.color
+                color=self.bot.color
             )
 
             await message.channel.send(author.mention, embed=embed)

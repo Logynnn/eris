@@ -31,9 +31,6 @@ from utils import database
 from utils.embed import Embed
 
 
-REWARD_ROLE_ID = 799739922651152394
-
-
 class MostActive(database.Table, table_name='most_active'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
     messages = database.Column(database.Integer)
@@ -49,6 +46,10 @@ class Rewards(commands.Cog):
     def cog_unload(self):
         self.give_rewards.cancel()
 
+    @property
+    def reward_role(self) -> discord.Role:
+        return self.cosmic.get_role(self.bot.constants.REWARD_ROLE_ID)
+
     @tasks.loop(hours=168)
     async def give_rewards(self):
         if self._first:
@@ -59,7 +60,6 @@ class Rewards(commands.Cog):
         fetch = await self.bot.manager.fetch_row(query)
 
         user = self.cosmic.get_member(fetch[0])
-        reward_role = self.cosmic.get_role(REWARD_ROLE_ID)
 
         for member in reward_role.members:
             await member.remove_roles(reward_role, reason='Removendo cargo de membro mais ativo da semana')
@@ -70,7 +70,7 @@ class Rewards(commands.Cog):
         embed = Embed(
             title='Novo tagarela da semana!',
             description=description,
-            color=self.cosmic.me.color
+            color=self.bot.color
         )
 
         query = 'DELETE FROM most_active'

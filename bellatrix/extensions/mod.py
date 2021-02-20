@@ -38,10 +38,6 @@ from utils.time import FutureTime
 from .reminder import Timer
 
 
-LOG_CHANNEL_ID = 798013309617176587
-MUTE_ROLE_ID = 799064942048444437
-
-
 class PunishmentImage(database.Table, table_name='punishment_images'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
     url = database.Column(database.String())
@@ -51,9 +47,6 @@ class Mod(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.cosmic = bot.cosmic
-
-        self.log_channel = bot.cosmic.get_channel(LOG_CHANNEL_ID)
-        self.mute_role = bot.cosmic.get_role(MUTE_ROLE_ID)
 
     async def get_punishment_image(self, member: discord.Member):
         query = 'SELECT url FROM punishment_images WHERE user_id = $1'
@@ -120,7 +113,7 @@ class Mod(commands.Cog):
         if self.bot.staff_role in member.roles:
             return await ctx.reply('Não foi possível silenciar este usuário.')
 
-        await member.add_roles(self.mute_role, reason=f'Ação realizada por {ctx.author} (ID: {ctx.author.id}')
+        await member.add_roles(self.bot.mute_role, reason=f'Ação realizada por {ctx.author} (ID: {ctx.author.id}')
         timer = await reminder.create_timer(
             when.datetime,
             'mute',
@@ -215,7 +208,7 @@ class Mod(commands.Cog):
 
     @commands.command()
     async def embed(self, ctx: commands.Context, *, code: codeblock_converter):
-        code = code.content.replace('{color}', str(ctx.guild.me.color.value))
+        code = code.content.replace('{color}', str(ctx.bot.color))
         embed = Embed.from_dict(json.loads(code))
 
         await ctx.send(embed=embed)
@@ -234,7 +227,7 @@ class Mod(commands.Cog):
         reason = f'Removendo silenciamento realizado por {moderator}'
 
         try:
-            await member.remove_roles(self.mute_role, reason=reason)
+            await member.remove_roles(self.bot.mute_role, reason=reason)
         except discord.HTTPException:
             pass
 
@@ -249,6 +242,8 @@ class Mod(commands.Cog):
         menu = PunishmentMenu()
         reason = await menu.prompt(ctx)
 
+        channel = self.bot.log_channel
+
         term = terms[name]
         duration = kwargs.get('duration', None)
 
@@ -257,7 +252,7 @@ class Mod(commands.Cog):
             thumbnail=member.avatar_url,
             author={'name': str(ctx.author),
                     'icon_url': ctx.author.avatar_url},
-            color=self.cosmic.me.color
+            color=ctx.bot.color
         )
 
         embed.add_field(name='Usuário', value=str(member), inline=False)
@@ -267,7 +262,7 @@ class Mod(commands.Cog):
         if duration:
             embed.add_field(name='Duração', value=duration, inline=False)
 
-        await self.log_channel.send(embed=embed)
+        await channel.send(embed=embed)
 
 
 def setup(bot: commands.Bot):

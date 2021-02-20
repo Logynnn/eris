@@ -36,14 +36,12 @@ import discord
 import asyncpg
 from discord.ext import commands, tasks
 
-
 from utils import database
 
 
 # TODO: Adicionar uma documentação decente.
 
 THRESHOLD = 4
-STARBOARD_CHANNEL_ID = 797633732340219964
 
 
 class StarError(commands.CheckFailure):
@@ -89,7 +87,7 @@ class Starboard(commands.Cog):
         self.bot = bot
 
         self.cosmic = bot.cosmic
-        self.starboard = bot.cosmic.get_channel(STARBOARD_CHANNEL_ID)
+        self.starboard = bot.cosmic.get_channel(bot.constants.STARBOARD_CHANNEL_ID)
 
         self.spoilers = re.compile(r'\|\|(.+?)\|\|')
 
