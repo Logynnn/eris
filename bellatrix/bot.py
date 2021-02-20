@@ -57,7 +57,7 @@ for root, _, files in os.walk('extensions'):
 
 class Bellatrix(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix='b/', intents=discord.Intents.all())
+        super().__init__(command_prefix=config.prefix, intents=discord.Intents.all())
         self.logger = logging.getLogger('bellatrix')
 
     @property
