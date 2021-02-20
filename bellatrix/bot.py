@@ -84,14 +84,9 @@ class Bellatrix(commands.Bot):
 
         self.load_extension('jishaku')
 
+        self.logger.info('Starting to load initial extensions.')
         for ext in get_all_extensions():
-            try:
-                self.load_extension(ext)
-            except Exception:
-                self.logger.exception(
-                    f'Extension \'{ext}\' could not be loaded.')
-            else:
-                self.logger.info(f'Extension \'{ext}\' has been loaded.')
+            self.load_extension(ext)
 
         print(f'Online com {len(self.users)} usuários')
 
@@ -104,6 +99,30 @@ class Bellatrix(commands.Bot):
 
         self.dispatch('regular_message', message)
         await self.process_commands(message)
+
+    def load_extension(self, name: str):
+        try:
+            super().load_extension(name)
+        except Exception:
+            self.logger.exception(f"Extension '{name}' could not be loaded.")
+        else:
+            self.logger.info(f"Extension '{name}' has been loaded.")
+
+    def unload_extension(self, name: str):
+        try:
+            super().unload_extension(name)
+        except Exception:
+            self.logger.exception(f"Extension '{name}' could not be unloaded.")
+        else:
+            self.logger.info(f"Extension '{name}' has been unloaded.")
+
+    def reload_extension(self, name: str):
+        try:
+            super().reload_extension(name)
+        except Exception:
+            self.logger.exception(f"Extension '{name}' could not be reloaded.")
+        else:
+            self.logger.info(f"Extension '{name}' has been reloaded.")
 
     async def process_commands(self, message: discord.Message):
         ctx = await self.get_context(message, cls=Context)
