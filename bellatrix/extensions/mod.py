@@ -245,8 +245,6 @@ class Mod(commands.Cog):
         menu = PunishmentMenu()
         reason = await menu.prompt(ctx)
 
-        channel = self.log_channel
-
         term = terms[name]
         duration = kwargs.get('duration', None)
 
@@ -262,7 +260,7 @@ class Mod(commands.Cog):
         if duration:
             embed.add_field(name='Duração', value=duration, inline=False)
 
-        await channel.send(embed=embed)
+        await self.log_channel.send(embed=embed)
 
 
 def setup(bot: commands.Bot):
