@@ -78,6 +78,10 @@ class Colors(commands.Cog):
         menu = Menu(roles, per_page=12)
         await menu.start(ctx)
 
+    @commands.command(aliases=['colours'])
+    async def colors(self, ctx: commands.Context):
+        await self.color_list(ctx)
+
 
 def setup(bot: commands.Bot):
     bot.add_cog(Colors(bot))
