@@ -46,7 +46,7 @@ class Colors(commands.Cog):
 
     @commands.group(aliases=['colour'], invoke_without_command=True)
     async def color(self, ctx: commands.Context, *, color: ColorConverter):
-        await self.color_add(ctx, color)
+        await self.color_add(ctx, color=color)
 
     @color.command(name='add')
     async def color_add(self, ctx: commands.Context, *, color: ColorConverter):
