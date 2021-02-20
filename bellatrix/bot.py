@@ -131,3 +131,7 @@ class Bellatrix(commands.Bot):
     async def process_commands(self, message: discord.Message):
         ctx = await self.get_context(message, cls=Context)
         await self.invoke(ctx)
+
+    def run(self, *args, **kwargs):
+        self.logger.info(f'Trying to run {self.__class__.__name__}.')
+        super().run(*args, **kwargs)
