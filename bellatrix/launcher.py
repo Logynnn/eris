@@ -41,8 +41,9 @@ import click
 import humanize
 
 import config
-from bot import Bellatrix, all_extensions
+from bot import Bellatrix
 from utils.database import DatabaseManager
+from utils.modules import get_all_extensions
 
 
 # TODO: Adicionar uma documentação decente.
@@ -134,7 +135,7 @@ def init(quiet: bool):
         return click.echo(
             f'Could not create PostgreSQL connection pool\n{traceback.format_exc()}', err=True)
 
-    for ext in all_extensions:
+    for ext in get_all_extensions():
         try:
             importlib.import_module(ext)
         except Exception:
