@@ -66,30 +66,6 @@ class Levels(commands.Cog):
 
         return level
 
-    @commands.command()
-    async def rank(self, ctx: commands.Context):
-        query = 'SELECT * FROM levels ORDER BY exp DESC'
-        fetch = await self.bot.manager.fetch(query)
-
-        data = []
-        for i, record in enumerate(fetch, start=1):
-            member = ctx.guild.get_member(record['user_id'])
-            exp = record['exp']
-            level = Levels._get_level_from_exp(exp)
-
-            field = {
-                'name': f'{i}. {member}',
-                'value': f'Experiência: **{exp}**\nNível: **{level}**',
-                'inline': False
-            }
-            data.append(field)
-
-        if not data:
-            return await ctx.reply('Não há nada por aqui.')
-
-        menu = Menu(data, paginator_type=1)
-        await menu.start(ctx)
-
     async def populate_cache(self):
         query = 'SELECT * FROM levels'
         fetch = await self.bot.manager.fetch(query)
@@ -98,24 +74,24 @@ class Levels(commands.Cog):
             user_id = record['user_id']
             exp = record['exp']
 
-            print(user_id, exp)
-            await self.cache.set(f'levels:{user_id}:exp', exp)
+            await self.cache.sadd('levels:members', user_id)
+            await self.cache.set(f'levels:member:{user_id}:exp', exp)
 
     async def get_user_experience(self, user_id: int) -> int:
-        exp = await self.cache.get(f'levels:{user_id}:exp')
+        exp = await self.cache.get(f'levels:member:{user_id}:exp')
 
         if not exp:
-            await self.cache.set(f'levels:{user_id}:exp', 0)
+            await self.cache.sadd('levels:members', user_id)
+            await self.cache.set(f'levels:member:{user_id}:exp', 0)
 
             query = 'INSERT INTO levels VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING'
             await self.bot.manager.execute(query, user_id, 0)
-
             return 0
 
         return int(exp)
 
     async def add_experience(self, user_id: int, exp: int):
-        await self.cache.incrby(f'levels:{user_id}:exp', exp)
+        await self.cache.incrby(f'levels:member:{user_id}:exp', exp)
 
         query = 'UPDATE levels SET exp = exp + $2 WHERE user_id = $1'
         await self.bot.manager.execute(query, user_id, exp)
@@ -123,7 +99,7 @@ class Levels(commands.Cog):
     async def update_rewards(self, member: discord.Member):
         given = []
 
-        user_exp = self.get_user_experience(member.id)
+        user_exp = await self.get_user_experience(member.id)
         user_level = Levels._get_level_from_exp(user_exp)
 
         for level, role in self._level_roles.items():
@@ -136,7 +112,31 @@ class Levels(commands.Cog):
             given.append(role.mention)
             await member.add_roles(role, reason=f'Usuário subiu para o nível {level}')
 
-        return rewards
+        return given
+
+    @commands.command()
+    async def rank(self, ctx: commands.Context):
+        kwargs = {'by': 'levels:member:*:exp', 'offset': 0, 'count': -1}
+        users = await self.cache.sort('levels:members', **kwargs)
+
+        if not users:
+            return await ctx.reply('Não há nada por aqui.')
+
+        data = []
+        for i, user_id in enumerate(reversed(users), start=1):
+            member = ctx.guild.get_member(int(user_id))
+
+            exp = int(await self.cache.get(f'levels:member:{user_id}:exp'))
+            level = Levels._get_level_from_exp(exp)
+
+            data.append({
+                'name': f'{i}. {member}',
+                'value': f'Experiência: **{exp}**\nNível: **{level}**',
+                'inline': False
+            })
+
+        menu = Menu(data, paginator_type=1)
+        await menu.start(ctx)
 
     @commands.Cog.listener()
     async def on_regular_message(self, message: discord.Message):
