@@ -45,6 +45,8 @@ os.environ['JISHAKU_HIDE'] = 'True'
 class Sirius(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=config.prefix, intents=discord.Intents.all())
+        self._first_start = True
+
         run = self.loop.run_until_complete
 
         self.logger = logging.getLogger('sirius')
@@ -87,6 +89,13 @@ class Sirius(commands.Bot):
         return self.cosmic.me.color
 
     async def on_ready(self):
+        if self._first_start:
+            self._first_start = False
+            self.dispatch('first_start')
+
+        print(f'Online com {len(self.users)} usuários')
+
+    async def on_first_start(self):
         self._image_url_regex = re.compile(
             r'''http[s]?://
             (?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))
@@ -94,13 +103,12 @@ class Sirius(commands.Bot):
             re.VERBOSE)
         self._emoji_regex = re.compile(r'<:(\w+):(\d+)>')
 
-        self.load_extension('jishaku')
-
         self.logger.info('Starting to load initial extensions.')
+
         for ext in get_all_extensions():
             self.load_extension(ext)
 
-        print(f'Online com {len(self.users)} usuários')
+        self.load_extension('jishaku')
 
     async def on_message(self, message: discord.Message):
         if not isinstance(message.author, discord.Member):
