@@ -27,6 +27,7 @@ import random
 
 import discord
 from discord.ext import commands, tasks
+from discord.ext.commands import CooldownMapping, BucketType
 
 from utils import database
 from utils.embed import Embed
@@ -43,6 +44,11 @@ class LevelsTable(database.Table, table_name='levels'):
 class Levels(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.cache = bot.cache
+
+        self.cooldown = CooldownMapping.from_cooldown(1, 60, BucketType.user)
+
+        bot.loop.create_task(self.populate_cache())
 
         self._level_roles = {}
         for index, role_id in enumerate(bot.constants.LEVEL_ROLES, start=1):
@@ -90,42 +96,37 @@ class Levels(commands.Cog):
         query = 'SELECT * FROM levels'
         fetch = await self.bot.manager.fetch(query)
 
-        self._cache = {}
-
         for record in fetch:
-            data = {
-                'exp': record['exp'],
-                'last_message': record['last_message']}
-            self._cache[record['user_id']] = data
+            user_id = record['user_id']
+            exp = record['exp']
 
-    async def get_profile(self, member: discord.Member):
-        try:
-            profile = self._cache[member.id]
-        except KeyError:
-            now = datetime.datetime.utcnow()
+            print(user_id, exp)
+            await self.cache.set(f'levels:{user_id}:exp', exp)
 
-            profile = {'exp': 0, 'last_message': now}
-            self._cache[member.id] = profile
+    async def get_user_experience(self, user_id: int) -> int:
+        exp = await self.cache.get(f'levels:{user_id}:exp')
 
-            query = 'INSERT INTO levels VALUES ($1, $2, $3) ON CONFLICT (user_id) DO NOTHING'
-            await self.bot.manager.execute(query, member.id, 0, now)
-        finally:
-            return profile
+        if not exp:
+            await self.cache.set(f'levels:{user_id}:exp', 0)
 
-    async def add_experience(self, user_id: int, exp: int, *, now: datetime.datetime):
-        profile = self._cache[user_id]
+            query = 'INSERT INTO levels VALUES ($1, $2) ON CONFLICT (user_id) DO NOTHING'
+            await self.bot.manager.execute(query, user_id, 0)
 
-        profile['exp'] += exp
-        profile['last_message'] = now
+            return 0
 
-        query = 'UPDATE levels SET exp = exp + $2, last_message = $3 WHERE user_id = $1'
-        await self.bot.manager.execute(query, user_id, exp, now)
+        return int(exp)
+
+    async def add_experience(self, user_id: int, exp: int):
+        await self.cache.incrby(f'levels:{user_id}:exp', exp)
+
+        query = 'UPDATE levels SET exp = exp + $2 WHERE user_id = $1'
+        await self.bot.manager.execute(query, user_id, exp)
 
     async def update_rewards(self, member: discord.Member):
-        profile = self._cache[member.id]
-        rewards = []
+        given = []
 
-        user_level = Levels._get_level_from_exp(profile['exp'])
+        user_exp = self.get_user_experience(member.id)
+        user_level = Levels._get_level_from_exp(user_exp)
 
         for level, role in self._level_roles.items():
             if level > user_level:
@@ -134,37 +135,35 @@ class Levels(commands.Cog):
             if role in member.roles:
                 continue
 
-            rewards.append(role)
+            given.append(role.mention)
             await member.add_roles(role, reason=f'Usuário subiu para o nível {level}')
 
         return rewards
 
     @commands.Cog.listener()
     async def on_regular_message(self, message: discord.Message):
-        if not hasattr(self, '_cache'):
-            await self.populate_cache()
-
         now = message.created_at
         author = message.author
 
-        profile = await self.get_profile(author)
+        bucket = self.cooldown.get_bucket(message)
+        retry_after = bucket.update_rate_limit()
 
-        delta = now - profile['last_message']
-        if not delta.total_seconds() >= 60:
+        if retry_after:
             return
 
-        exp = random.randint(15, 25)
-        level = self._get_level_from_exp(profile['exp'])
+        exp = await self.get_user_experience(author.id)
+        level = self._get_level_from_exp(exp)
 
-        await self.add_experience(author.id, exp, now=now)
+        to_add = random.randint(15, 25)
+        await self.add_experience(author.id, to_add)
 
-        new_level = self._get_level_from_exp(profile['exp'])
+        new_exp = await self.get_user_experience(author.id)
+        new_level = self._get_level_from_exp(new_exp)
         if level != new_level:
             messages = [f'Parabéns, você subiu para o nível **{new_level}**.']
 
             rewards = await self.update_rewards(author)
             if rewards:
-                roles = [role.mention for role in rewards]
                 messages.append(
                     'Ao subir neste nível você recebeu %s.' %
                     ', '.join(roles))
