@@ -111,7 +111,7 @@ class Levels(commands.Cog):
         user_exp = await self.get_user_experience(member.id)
         user_level = Levels._get_level_from_exp(user_exp)
 
-        await member.remove_roles(*self._level_roles, reason='Removendo cargo de níveis anteriores')
+        await member.remove_roles(*self._level_roles.values(), reason='Removendo cargo de níveis anteriores')
 
         for level, role in self._level_roles.items():
             if level > user_level:
