@@ -33,6 +33,11 @@ from discord.ext import commands
 import config
 from utils.context import Context
 from utils.modules import get_all_extensions
+from utils.cache import create_cache
+
+os.environ['JISHAKU_NO_UNDERSCORE'] = 'True'
+os.environ['JISHAKU_NO_DM_TRACEBACK'] = 'True'
+os.environ['JISHAKU_HIDE'] = 'True'
 
 
 # TODO: Adicionar uma documentação decente.
