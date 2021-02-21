@@ -108,10 +108,10 @@ class Levels(commands.Cog):
         await self.bot.manager.execute(query, user_id, exp)
 
     async def update_rewards(self, member: discord.Member):
-        given = []
-
         user_exp = await self.get_user_experience(member.id)
         user_level = Levels._get_level_from_exp(user_exp)
+
+        await member.remove_roles(*self._level_roles, reason='Removendo cargo de níveis anteriores')
 
         for level, role in self._level_roles.items():
             if level > user_level:
@@ -120,10 +120,8 @@ class Levels(commands.Cog):
             if role in member.roles:
                 continue
 
-            given.append(role.mention)
-            await member.add_roles(role, reason=f'Usuário subiu para o nível {level}')
-
-        return given
+        await member.add_roles(role, reason=f'Usuário subiu para o nível {level}')
+        return role.mention
 
     @commands.command()
     async def rank(self, ctx: commands.Context):
@@ -181,11 +179,9 @@ class Levels(commands.Cog):
             fmt = 'Member {0} ({0.id}) leveled up ({1} -> {2})'
             self.logger.info(fmt.format(author, level, new_level))
 
-            rewards = await self.update_rewards(author)
-            if rewards:
-                messages.append(
-                    'Ao subir neste nível você recebeu %s.' %
-                    ', '.join(roles))
+            reward = await self.update_rewards(author)
+            if reward:
+                messages.append(f'Ao subir neste nível você recebeu {reward}.')
 
             embed = Embed(description='\n'.join(messages), color=self.bot.color)
             embed.set_author(name=str(author), icon_url=author.avatar_url)
