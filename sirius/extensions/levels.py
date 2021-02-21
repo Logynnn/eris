@@ -36,9 +36,7 @@ from utils.menus import Menu
 
 class LevelsTable(database.Table, table_name='levels'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
-
     exp = database.Column(database.Integer(big=True))
-    last_message = database.Column(database.Datetime)
 
 
 class Levels(commands.Cog):
