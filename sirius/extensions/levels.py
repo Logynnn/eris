@@ -187,11 +187,8 @@ class Levels(commands.Cog):
                     'Ao subir neste nível você recebeu %s.' %
                     ', '.join(roles))
 
-            embed = Embed(
-                description='\n'.join(messages),
-                author={'name': str(author), 'icon_url': author.avatar_url},
-                color=self.bot.color
-            )
+            embed = Embed(description='\n'.join(messages), color=self.bot.color)
+            embed.set_author(name=str(author), icon_url=author.avatar_url)
 
             await message.channel.send(author.mention, embed=embed)
 
