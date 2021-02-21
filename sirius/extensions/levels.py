@@ -24,6 +24,7 @@ SOFTWARE.
 
 import datetime
 import random
+import logging
 
 import discord
 from discord.ext import commands, tasks
@@ -42,11 +43,12 @@ class LevelsTable(database.Table, table_name='levels'):
 class Levels(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.cache = bot.cache
-
-        self.cooldown = CooldownMapping.from_cooldown(1, 60, BucketType.user)
 
         bot.loop.create_task(self.populate_cache())
+
+        self.cache = bot.cache
+        self.logger = logging.getLogger('sirius.levels')
+        self.cooldown = CooldownMapping.from_cooldown(1, 60, BucketType.user)
 
         self._level_roles = {}
         for index, role_id in enumerate(bot.constants.LEVEL_ROLES, start=1):
@@ -169,8 +171,15 @@ class Levels(commands.Cog):
 
         new_exp = await self.get_user_experience(author.id)
         new_level = self._get_level_from_exp(new_exp)
+
+        fmt = 'Member {0} ({0.id}) received {1} exp. ({2} -> {3})'
+        self.logger.info(fmt.format(author, to_add, exp, new_exp))
+
         if level != new_level:
             messages = [f'Parabéns, você subiu para o nível **{new_level}**.']
+
+            fmt = 'Member {0} ({0.id}) leveled up ({1} -> {2})'
+            self.logger.info(fmt.format(author, level, new_level))
 
             rewards = await self.update_rewards(author)
             if rewards:
