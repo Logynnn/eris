@@ -42,12 +42,12 @@ os.environ['JISHAKU_HIDE'] = 'True'
 
 # TODO: Adicionar uma documentação decente.
 
-class Bellatrix(commands.Bot):
+class Sirius(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=config.prefix, intents=discord.Intents.all())
         run = self.loop.run_until_complete
 
-        self.logger = logging.getLogger('bellatrix')
+        self.logger = logging.getLogger('sirius')
         self.cache = run(create_cache(config.redis, loop=self.loop))
 
     @property
