@@ -20,7 +20,7 @@ pip install -r requirements.txt
 CREATE ROLE sirius WITH LOGIN PASSWORD 'sua_senha';
 CREATE DATABASE sirius OWNER sirius;
 ```
-3. Configurando arquivos
+3. Configurando arquivos.
 
 Crie um arquivo `config.py` dentro da pasta `sirius/` e coloque as seguintes informações:
 ```py
