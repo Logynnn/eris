@@ -2,7 +2,7 @@
 O bot pessoal e privado do servidor [Cosmic ✨](https://discord.gg/SsfvNvNEZR).
 
 ## Rodando
-Recomendo que não crie sua própria instância do bot para uso pessoal, este repositório foi criado com a intenções educacionais.
+Recomendo que não crie sua própria instância do bot para uso pessoal, este repositório foi criado com intenções educacionais.
 
 **Nota:** É necessário ter o [PostgreSQL](https://www.postgresql.org/) e o [Redis](https://redis.io/) instalados e configurados.
 
