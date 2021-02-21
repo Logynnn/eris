@@ -209,13 +209,6 @@ class Mod(commands.Cog):
         deleted = await ctx.channel.purge(limit=amount, before=before, after=after, check=predicate)
         await ctx.reply(f'Removi `{len(deleted)}` mensagens com sucesso.')
 
-    @commands.command()
-    async def embed(self, ctx: commands.Context, *, code: codeblock_converter):
-        code = code.content.replace('{color}', str(ctx.bot.color))
-        embed = Embed.from_dict(json.loads(code))
-
-        await ctx.send(embed=embed)
-
     @commands.Cog.listener()
     async def on_mute_complete(self, timer: Timer):
         moderator_id, member_id = timer.args
