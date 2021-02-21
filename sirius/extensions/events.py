@@ -33,6 +33,7 @@ class Events(commands.Cog):
         self.general_channel = bot.general_channel
         self.nitro_booster_role = bot.nitro_booster_role
 
+    # TODO: Fazer uma mensagem de bem-vindo agradável.
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         guild = member.guild
@@ -45,6 +46,7 @@ class Events(commands.Cog):
 
         await self.general_channel.send(member.mention, embed=embed)
 
+    # RELATED: https://github.com/discord/discord-api-docs/issues/1182
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if before.roles == after.roles:
