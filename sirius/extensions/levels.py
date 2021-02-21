@@ -66,6 +66,15 @@ class Levels(commands.Cog):
 
         return level
 
+    def can_receive_exp(self, channel_id: int) -> bool:
+        channels = (
+            self.bot.constants.GENERAL_CHANNEL_ID,
+            self.bot.constants.SECONDARY_CHANNEL_ID,
+            self.bot.constants.NO_MIC_CHANNEL
+        )
+
+        return channel_id in channels
+
     async def populate_cache(self):
         query = 'SELECT * FROM levels'
         fetch = await self.bot.manager.fetch(query)
@@ -140,6 +149,9 @@ class Levels(commands.Cog):
 
     @commands.Cog.listener()
     async def on_regular_message(self, message: discord.Message):
+        if not self.can_receive_exp(message.channel.id):
+            return
+
         now = message.created_at
         author = message.author
 
