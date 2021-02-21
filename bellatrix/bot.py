@@ -45,7 +45,10 @@ os.environ['JISHAKU_HIDE'] = 'True'
 class Bellatrix(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=config.prefix, intents=discord.Intents.all())
+        run = self.loop.run_until_complete
+
         self.logger = logging.getLogger('bellatrix')
+        self.cache = run(create_cache(config.redis, loop=self.loop))
 
     @property
     def constants(self):
