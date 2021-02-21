@@ -8,15 +8,12 @@ Recomendo que não crie sua própria instância do bot para uso pessoal, este re
 
 1. Configure um ambiente virtual.
 ```bash
-# entrando na pasta do bot
-cd sirius/
 # criando o ambiente virtual
-py -m venv venv
+python -m venv venv
 # ativando o ambiente virtual
 source venv/bin/activate
 # instalando dependências
 pip install -r requirements.txt
-
 ```
 2. Crie o banco de dados no PostgreSQL.
 ```sql
@@ -25,7 +22,7 @@ CREATE DATABASE sirius OWNER sirius;
 ```
 3. Configurando arquivos
 
-Crie um arquivo `config.py` dentro da pasta `sirius` e coloque as seguintes informações:
+Crie um arquivo `config.py` dentro da pasta `sirius/` e coloque as seguintes informações:
 ```py
 # discord
 token = '<token_do_bot>'
@@ -35,7 +32,6 @@ prefix = '<prefixo>'
 postgres = 'postgres://sirius:<senha>@<host>/sirius' # suas informações de cima
 redis = 'redis://<host>'
 ```
-
 4. Configurando o banco de dados.
 
-Para configurar o PostgreSQL, digite `py launcher.py db init` dentro da pasta `sirius`.
+Para configurar o PostgreSQL, digite `python launcher.py db init` dentro da pasta `sirius/`.
