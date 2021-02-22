@@ -39,8 +39,6 @@ class Events(commands.Cog):
         if member.bot:
             return
 
-        guild = member.guild
-
         embed = discord.Embed(
             title='Um membro entrou no servidor!',
             description=f'{member.mention} entrou no servidor! ❤️\n\nNão se esqueça de ler as <#795029002225451048>!',
@@ -59,8 +57,6 @@ class Events(commands.Cog):
         has_boosted_after = self.nitro_booster_role in after.roles
 
         if not has_boosted_before and has_boosted_after:
-            guild = after.guild
-
             embed = discord.Embed(
                 title=f'{after.name} impulsionou o servidor!',
                 description=f'Uma chuva de aplausos! {after.mention} impulsionou o servidor! ❤️',
