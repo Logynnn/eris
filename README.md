@@ -22,7 +22,7 @@ CREATE DATABASE sirius OWNER sirius;
 ```
 3. Configurando arquivos.
 
-Crie um arquivo `config.py` dentro da pasta `sirius/` e coloque as seguintes informações:
+Crie um arquivo `config.py` dentro da pasta `bot/` e coloque as seguintes informações:
 ```py
 # discord
 token = '<token_do_bot>'
@@ -34,4 +34,4 @@ redis = 'redis://<host>'
 ```
 4. Configurando o banco de dados.
 
-Para configurar o PostgreSQL, digite `python launcher.py db init` dentro da pasta `sirius/`.
+Para configurar o PostgreSQL, digite `python launcher.py db init` dentro da pasta `bot/`.
