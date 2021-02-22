@@ -43,7 +43,7 @@ class PunishmentImage(database.Table, table_name='punishment_images'):
     url = database.Column(database.String())
 
 
-class Mod(commands.Cog):
+class Mod(commands.Cog, name='Moderação'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.cosmic = bot.cosmic

@@ -103,7 +103,7 @@ class GuildConverter(commands.Converter):
         return Guild(ctx, record=record) if record else None
 
 
-class Guilds(commands.Cog):
+class Guilds(commands.Cog, name='Guildas'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 

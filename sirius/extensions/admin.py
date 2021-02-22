@@ -25,7 +25,7 @@ SOFTWARE.
 from discord.ext import commands
 
 
-class Admin(commands.Cog):
+class Admin(commands.Cog, name='Administração'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 

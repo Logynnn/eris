@@ -40,7 +40,7 @@ class ColourConverter(commands.Converter):
         return colour if colour in ctx.cog.colours else None
 
 
-class Colours(commands.Cog):
+class Colours(commands.Cog, name='Cores'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.colours = [r for r in bot.cosmic.roles if r.name.startswith('「🎨」')]

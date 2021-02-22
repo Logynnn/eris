@@ -40,7 +40,7 @@ class LevelsTable(database.Table, table_name='levels'):
     exp = database.Column(database.Integer(big=True))
 
 
-class Levels(commands.Cog):
+class Levels(commands.Cog, name='Ranking'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 

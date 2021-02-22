@@ -47,7 +47,7 @@ class HelpCommand(commands.HelpCommand):
         await menu.start(ctx)
 
 
-class Help(commands.Cog):
+class Help(commands.Cog, name='Ajuda'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
