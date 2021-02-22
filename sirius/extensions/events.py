@@ -36,6 +36,9 @@ class Events(commands.Cog):
     # TODO: Fazer uma mensagem de bem-vindo agradável.
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        if member.bot:
+            return
+
         guild = member.guild
 
         embed = discord.Embed(
