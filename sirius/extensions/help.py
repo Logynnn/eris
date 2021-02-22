@@ -35,8 +35,8 @@ class HelpCommand(commands.HelpCommand):
         bot = ctx.bot
 
         entries = await self.filter_commands(bot.commands, sort=True)
-
         all_commands = defaultdict(list)
+        
         for command in entries:
             if not command.cog:
                 continue
