@@ -62,11 +62,11 @@ class SpamChecker:
         return False
 
 
-class Raid(commands.Cog):
+class Spam(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-        self.logger = logging.getLogger('sirius.raid')
+        self.logger = logging.getLogger('sirius.spam')
         self.spam_checker = SpamChecker()
 
     async def check_raid(self, message: discord.Message) -> bool:
@@ -112,4 +112,4 @@ class Raid(commands.Cog):
         
 
 def setup(bot: commands.Bot):
-    bot.add_cog(Raid(bot))
+    bot.add_cog(Spam(bot))
