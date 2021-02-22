@@ -26,6 +26,7 @@ import os
 import re
 import logging
 import importlib
+from typing import List
 
 import discord
 from discord.ext import commands
@@ -70,6 +71,11 @@ class Sirius(commands.Bot):
     @property
     def nitro_booster_role(self) -> discord.Role:
         return self.cosmic.get_role(self.constants.NITRO_BOOSTER_ROLE_ID)
+
+    @property
+    def premium_roles(self) -> List[discord.Role]:
+        PREMIUM_ROLES = self.constants.PREMIUM_ROLES
+        return [self.cosmic.get_role(role_id) for role_id in PREMIUM_ROLES]
 
     @property
     def mute_role(self) -> discord.Role:
