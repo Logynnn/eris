@@ -40,7 +40,7 @@ class Admin(commands.Cog, name='Administração'):
 
     @dev.command(name='shutdown', aliases=['restart', 'logout'])
     async def dev_shutdown(self, ctx: commands.Context):
-        await ctx.reply('Certo, voltarei em breve!')
+        await ctx.reply('Certo, voltarei em breve! 👋')
         await ctx.bot.logout()
 
 
