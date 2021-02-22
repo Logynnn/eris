@@ -116,6 +116,9 @@ class Sirius(commands.Bot):
         if message.author.bot:
             return
 
+        if message.guild != self.cosmic:
+            return
+
         self.dispatch('regular_message', message)
         await self.process_commands(message)
 
