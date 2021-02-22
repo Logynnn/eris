@@ -26,6 +26,7 @@ import discord
 from discord.ext import commands
 
 from utils.menus import Menu
+from utils import checks
 
 
 class ColourConverter(commands.Converter):
@@ -49,6 +50,7 @@ class Colours(commands.Cog):
         await self.colour_add(ctx, colour=colour)
 
     @colour.command(name='add')
+    @checks.is_premium()
     async def colour_add(self, ctx: commands.Context, *, colour: ColourConverter):
         if not colour:
             return await ctx.reply('Cor não encontrada.')
