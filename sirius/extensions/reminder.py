@@ -50,7 +50,7 @@ class Reminders(database.Table):
         database.Datetime,
         default='now() at time zone \'utc\'')
     event = database.Column(database.String)
-    extra = database.Column(database.JSON, default='\'{}\'::jsonb')
+    extra = database.Column(database.JSON, default="'{}'::jsonb")
 
 
 class Timer:
