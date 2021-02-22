@@ -147,10 +147,10 @@ class Levels(commands.Cog, name='Ranking'):
             data.append({
                 'name': f'{i}. {member}',
                 'value': f'Experiência: **{exp}**\nNível: **{level}**',
-                'inline': False
+                'inline': True
             })
 
-        menu = Menu(data, paginator_type=1)
+        menu = Menu(data, paginator_type=1, per_page=6)
         await menu.start(ctx)
 
     @commands.Cog.listener()
