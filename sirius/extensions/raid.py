@@ -79,7 +79,7 @@ class Raid(commands.Cog):
         try:
             await author.ban(reason='Autoban from spam')
         except Exception:
-            fmt = f'Failed to autoban {0} ({0.id}) by spam'
+            fmt = 'Failed to autoban {0} ({0.id}) by spam'
         else:
             fmt = 'Banned {0} ({0.id}) by spam'
         finally:
