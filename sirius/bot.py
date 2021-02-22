@@ -37,7 +37,6 @@ from utils.cache import create_cache
 
 os.environ['JISHAKU_NO_UNDERSCORE'] = 'True'
 os.environ['JISHAKU_NO_DM_TRACEBACK'] = 'True'
-os.environ['JISHAKU_HIDE'] = 'True'
 
 
 # TODO: Adicionar uma documentação decente.

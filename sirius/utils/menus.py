@@ -25,6 +25,8 @@ SOFTWARE.
 import discord
 from discord.ext import commands, menus
 
+from typing import List, Mapping
+
 
 class _MenuBase(menus.Menu):
     async def update(self, payload: discord.RawReactionActionEvent):
@@ -143,3 +145,35 @@ class Menu(_MenuPagesBase):
                 data,
                 per_page=per_page),
             delete_message_after=True)
+
+
+class HelpPaginator(menus.ListPageSource):
+    def __init__(self, commands: Mapping[commands.Cog, List[commands.Command]]):
+        entries = sorted(commands.keys(), key=lambda c: c.qualified_name)
+        self.commands = commands
+
+        super().__init__(entries, per_page=6)
+
+    def get_opening_note(self, ctx: commands.Context) -> str:
+        command = f'{ctx.prefix}{ctx.invoked_with}'
+        return 'Use `{0} [comando]` para mais informações sobre um comando.\n' \
+               'Use `{0} [categoria]` para mais informações sobre uma categoria.'.format(command)
+
+    async def format_page(self, menu: _MenuBase, cogs: List[commands.Cog]):
+        ctx = menu.ctx
+
+        embed = discord.Embed(description=self.get_opening_note(ctx), color=ctx.bot.color)
+        embed.set_author(name=str(ctx.author), icon_url=ctx.author.avatar_url)
+        embed.set_footer(text=f'Página {menu.current_page + 1}/{self.get_max_pages()}')
+
+        fields = []
+        for cog in cogs:
+            commands = [f'`{cmd.qualified_name}`' for cmd in self.commands.get(cog)]
+            embed.add_field(name=cog.qualified_name, value=', '.join(commands), inline=False)
+
+        return embed
+
+
+class HelpMenu(_MenuPagesBase):
+    def __init__(self, data):
+        super().__init__(HelpPaginator(data), clear_reactions_after=True)
