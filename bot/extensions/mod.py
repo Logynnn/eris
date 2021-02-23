@@ -46,14 +46,17 @@ class PunishmentImage(database.Table, table_name='punishment_images'):
 class Mod(commands.Cog, name='Moderação'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.cosmic = bot.cosmic
-
-        self.staff_role = bot.staff_role
-        self.mute_role = bot.mute_role
-        self.log_channel = bot.log_channel
 
     async def cog_check(self, ctx: commands.Context):
         return ctx.bot.staff_role in ctx.author.roles
+
+    @commands.Cog.listener()
+    async def on_first_ready(self):
+        self.cosmic = self.bot.cosmic
+        
+        self.staff_role = self.bot.staff_role
+        self.mute_role = self.bot.mute_role
+        self.log_channel = self.bot.log_channel
 
     async def get_punishment_image(self, member: discord.Member):
         query = 'SELECT url FROM punishment_images WHERE user_id = $1'

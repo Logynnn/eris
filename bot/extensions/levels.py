@@ -44,15 +44,8 @@ class Levels(commands.Cog, name='Ranking'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-        bot.loop.create_task(self.populate_cache())
-
-        self.cache = bot.cache
         self.logger = logging.getLogger('sirius.levels')
         self.cooldown = CooldownMapping.from_cooldown(1, 60, BucketType.user)
-
-        self._level_roles = {}
-        for index, role_id in enumerate(bot.constants.LEVEL_ROLES, start=1):
-            self._level_roles[index * 10] = bot.cosmic.get_role(role_id)
 
     @staticmethod
     def _get_level_exp(lvl: int) -> int:
@@ -67,6 +60,15 @@ class Levels(commands.Cog, name='Ranking'):
             level += 1
 
         return level
+
+    @commands.Cog.listener()
+    async def on_first_ready(self):
+        self.cache = self.bot.cache
+        await self.populate_cache()
+
+        self._level_roles = {}
+        for index, role_id in enumerate(self.bot.constants.LEVEL_ROLES, start=1):
+            self._level_roles[index * 10] = self.bot.cosmic.get_role(role_id)
 
     def can_receive_exp(self, channel_id: int) -> bool:
         channels = (

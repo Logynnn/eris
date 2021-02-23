@@ -31,7 +31,6 @@ from discord.ext import commands
 class Status(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        bot.loop.create_task(self.update_status())
 
     async def update_status(self):
         users = len(self.bot.users)
@@ -43,6 +42,10 @@ class Status(commands.Cog):
         status = discord.Status.dnd
 
         await self.bot.change_presence(activity=activity, status=status)
+
+    @commands.Cog.listener()
+    async def on_first_ready(self):
+        await self.update_status()
 
     @commands.Cog.listener()
     async def on_member_join(self, guild: discord.Guild):

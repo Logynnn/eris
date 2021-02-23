@@ -31,12 +31,6 @@ from discord.ext import commands
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.cosmic = bot.cosmic
-
-        self.general_channel = bot.general_channel
-        self.nitro_booster_role = bot.nitro_booster_role
-
-        bot.loop.create_task(self.sanitize_all_nicknames())
 
     async def sanitize_all_nicknames(self):
         for member in self.cosmic.members:
@@ -69,6 +63,15 @@ class Events(commands.Cog):
 
         await self.general_channel.send(member.mention, embed=embed)
     
+    @commands.Cog.listener()
+    async def on_first_ready(self):
+        self.cosmic = self.bot.cosmic
+
+        self.general_channel = self.bot.general_channel
+        self.nitro_booster_role = self.bot.nitro_booster_role
+
+        await self.sanitize_all_nicknames()
+
     # TODO: Fazer uma mensagem de bem-vindo agradável.
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):

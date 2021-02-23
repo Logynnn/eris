@@ -39,14 +39,15 @@ class MostActive(database.Table, table_name='most_active'):
 class Rewards(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.cosmic = bot.cosmic
-
-        self.general_channel = bot.general_channel
-
         self.give_rewards.start()
 
     def cog_unload(self):
         self.give_rewards.cancel()
+
+    @commands.Cog.listener()
+    async def on_first_ready(self):
+        self.cosmic = self.bot.cosmic
+        self.general_channel = self.bot.general_channel
 
     @property
     def reward_role(self) -> discord.Role:

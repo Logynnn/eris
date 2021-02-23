@@ -85,10 +85,6 @@ class Starrers(database.Table):
 class Starboard(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.cosmic = bot.cosmic
-
-        self.starboard = bot.cosmic.get_channel(
-            bot.constants.STARBOARD_CHANNEL_ID)
 
         self.spoilers = re.compile(r'\|\|(.+?)\|\|')
 
@@ -97,6 +93,12 @@ class Starboard(commands.Cog):
 
     def cog_unload(self):
         self.clean_message_cache.cancel()
+
+    @commands.Cog.listener()
+    async def on_first_ready(self):
+        self.cosmic = self.bot.cosmic
+        self.startboard = self.cosmic.get_channel(
+            self.bot.constants.STARBOARD_CHANNEL_ID)
 
     @tasks.loop(hours=1)
     async def clean_message_cache(self):

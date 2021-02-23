@@ -45,12 +45,19 @@ os.environ['JISHAKU_NO_DM_TRACEBACK'] = 'True'
 class Sirius(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=config.prefix, intents=discord.Intents.all())
+        
         self._first_start = True
-
         run = self.loop.run_until_complete
 
         self.logger = logging.getLogger('sirius')
         self.cache = run(create_cache(config.redis, loop=self.loop))
+
+        self.logger.info('Starting to load initial extensions.')
+        for name in get_all_extensions():
+            self.load_extension(name)
+
+        # carregar jishaku separadamente.
+        self.load_extension('jishaku')
 
     @property
     def constants(self):
@@ -96,11 +103,11 @@ class Sirius(commands.Bot):
     async def on_ready(self):
         if self._first_start:
             self._first_start = False
-            self.dispatch('first_start')
+            self.dispatch('first_ready')
 
         print(f'Online com {len(self.users)} usuários')
 
-    async def on_first_start(self):
+    async def on_first_ready(self):
         self._image_url_regex = re.compile(
             r'''http[s]?://
             (?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))
@@ -108,12 +115,7 @@ class Sirius(commands.Bot):
             re.VERBOSE)
         self._emoji_regex = re.compile(r'<:(\w+):(\d+)>')
 
-        self.logger.info('Starting to load initial extensions.')
-
-        for ext in get_all_extensions():
-            self.load_extension(ext)
-
-        self.load_extension('jishaku')
+        self.logger.info(f'{self.__class__.__name__} is ready to go.')
 
     async def on_message(self, message: discord.Message):
         if not isinstance(message.author, discord.Member):
