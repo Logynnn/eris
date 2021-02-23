@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
+import string
+
 import discord
 from discord.ext import commands
 
@@ -29,13 +31,33 @@ from discord.ext import commands
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.cosmic = bot.cosmic
 
         self.general_channel = bot.general_channel
         self.nitro_booster_role = bot.nitro_booster_role
 
-    # TODO: Fazer uma mensagem de bem-vindo agradável.
-    @commands.Cog.listener()
-    async def on_member_join(self, member: discord.Member):
+        bot.loop.create_task(self.sanitize_all_nicknames())
+
+    async def sanitize_all_nicknames(self):
+        for member in self.cosmic.members:
+            if member.bot:
+                continue
+
+            await self.sanitize_nickname(member)
+
+    async def sanitize_nickname(self, member: discord.Member):
+        if member.guild_permissions.administrator:
+            return
+
+        display_name = member.display_name
+        sanitized = ''.join([str(char) for char in display_name if char in string.printable])
+
+        if display_name == sanitized:
+            return
+
+        await member.edit(reason=f'Apelido sanitizado', nick=sanitized)
+
+    async def send_welcome(self, member: discord.Member):
         if member.bot:
             return
 
@@ -46,10 +68,19 @@ class Events(commands.Cog):
         )
 
         await self.general_channel.send(member.mention, embed=embed)
+    
+    # TODO: Fazer uma mensagem de bem-vindo agradável.
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        await self.sanitize_nickname(member)
+        await self.send_welcome(member)
 
     # RELATED: https://github.com/discord/discord-api-docs/issues/1182
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if before.display_name != after.display_name:
+            return await self.sanitize_nickname(after)
+
         if before.roles == after.roles:
             return
 
