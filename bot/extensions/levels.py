@@ -35,6 +35,9 @@ from utils.embed import Embed
 from utils.menus import Menu
 
 
+log = logging.getLogger(__name__)
+
+
 class LevelsTable(database.Table, table_name='levels'):
     user_id = database.Column(database.Integer(big=True), primary_key=True)
     exp = database.Column(database.Integer(big=True))
@@ -44,7 +47,7 @@ class Levels(commands.Cog, name='Ranking'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-        self.logger = logging.getLogger('sirius.levels')
+        log = logging.getLogger('sirius.levels')
         self.cooldown = CooldownMapping.from_cooldown(1, 60, BucketType.user)
 
     @staticmethod
@@ -179,13 +182,13 @@ class Levels(commands.Cog, name='Ranking'):
         new_level = self._get_level_from_exp(new_exp)
 
         fmt = 'Member {0} ({0.id}) received {1} exp. ({2} -> {3})'
-        self.logger.info(fmt.format(author, to_add, exp, new_exp))
+        log.info(fmt.format(author, to_add, exp, new_exp))
 
         if level != new_level:
             messages = [f'Parabéns, você subiu para o nível **{new_level}**.']
 
             fmt = 'Member {0} ({0.id}) leveled up ({1} -> {2})'
-            self.logger.info(fmt.format(author, level, new_level))
+            log.info(fmt.format(author, level, new_level))
 
             reward = await self.update_rewards(author)
             if reward:

@@ -36,8 +36,11 @@ from utils.context import Context
 from utils.modules import get_all_extensions
 from utils.cache import create_cache
 
+
 os.environ['JISHAKU_NO_UNDERSCORE'] = 'True'
 os.environ['JISHAKU_NO_DM_TRACEBACK'] = 'True'
+
+log = logging.getLogger(__name__)
 
 
 # TODO: Adicionar uma documentação decente.
@@ -49,10 +52,9 @@ class Sirius(commands.Bot):
         self._first_start = True
         run = self.loop.run_until_complete
 
-        self.logger = logging.getLogger('sirius')
         self.cache = run(create_cache(config.redis, loop=self.loop))
 
-        self.logger.info('Starting to load initial extensions.')
+        log.info('Starting to load initial extensions.')
         for name in get_all_extensions():
             self.load_extension(name)
 
@@ -115,7 +117,7 @@ class Sirius(commands.Bot):
             re.VERBOSE)
         self._emoji_regex = re.compile(r'<:(\w+):(\d+)>')
 
-        self.logger.info(f'{self.__class__.__name__} is ready to go.')
+        log.info(f'{self.__class__.__name__} is ready to go.')
 
     async def on_message(self, message: discord.Message):
         if not isinstance(message.author, discord.Member):
@@ -134,30 +136,30 @@ class Sirius(commands.Bot):
         try:
             super().load_extension(name)
         except Exception:
-            self.logger.exception(f"Extension '{name}' could not be loaded.")
+            log.exception(f"Extension '{name}' could not be loaded.")
         else:
-            self.logger.info(f"Extension '{name}' has been loaded.")
+            log.info(f"Extension '{name}' has been loaded.")
 
     def unload_extension(self, name: str):
         try:
             super().unload_extension(name)
         except Exception:
-            self.logger.exception(f"Extension '{name}' could not be unloaded.")
+            log.exception(f"Extension '{name}' could not be unloaded.")
         else:
-            self.logger.info(f"Extension '{name}' has been unloaded.")
+            log.info(f"Extension '{name}' has been unloaded.")
 
     def reload_extension(self, name: str):
         try:
             super().reload_extension(name)
         except Exception:
-            self.logger.exception(f"Extension '{name}' could not be reloaded.")
+            log.exception(f"Extension '{name}' could not be reloaded.")
         else:
-            self.logger.info(f"Extension '{name}' has been reloaded.")
+            log.info(f"Extension '{name}' has been reloaded.")
 
     async def process_commands(self, message: discord.Message):
         ctx = await self.get_context(message, cls=Context)
         await self.invoke(ctx)
 
     def run(self, *args, **kwargs):
-        self.logger.info(f'Trying to run {self.__class__.__name__}.')
+        log.info(f'Trying to run {self.__class__.__name__}.')
         super().run(*args, **kwargs)

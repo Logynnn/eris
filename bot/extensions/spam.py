@@ -38,6 +38,9 @@ from discord.ext import commands
 from discord.ext.commands import CooldownMapping, BucketType
 
 
+log = logging.getLogger(__name__)
+
+
 class CooldownByContent(CooldownMapping):
     def _bucket_key(self, message: discord.Message):
         return (message.channel.id, message.content)
@@ -66,7 +69,7 @@ class Spam(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-        self.logger = logging.getLogger('sirius.spam')
+        log = logging.getLogger('sirius.spam')
         self.spam_checker = SpamChecker()
 
     async def check_raid(self, message: discord.Message) -> bool:
@@ -83,7 +86,7 @@ class Spam(commands.Cog):
         else:
             fmt = 'Banned {0} ({0.id}) by spam'
         finally:
-            self.logger.info(fmt.format(author))
+            log.info(fmt.format(author))
             return True
 
     @commands.Cog.listener()
@@ -108,7 +111,7 @@ class Spam(commands.Cog):
         else:
             fmt = 'Member {0} ({0.id}) has been autobanned for spamming mentions ({1} mentions)'
         finally:
-            self.logger.info(fmt.format(author, mentions_count))
+            log.info(fmt.format(author, mentions_count))
         
 
 def setup(bot: commands.Bot):
