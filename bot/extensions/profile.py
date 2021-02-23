@@ -41,4 +41,4 @@ class Profile(commands.Cog, name='Perfil'):
 
 
 def setup(bot: commands.Bot):
-    bot.add_cog(Profile)
+    bot.add_cog(Profile(bot))
