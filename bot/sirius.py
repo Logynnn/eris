@@ -120,6 +120,10 @@ class Sirius(commands.Bot):
         log.info(f'{self.__class__.__name__} is ready to go.')
 
     async def on_message(self, message: discord.Message):
+        # não quero ver mensagens enquanto o bot não estiver pronto.
+        if not self.is_ready():
+            return
+
         if not isinstance(message.author, discord.Member):
             return
 
