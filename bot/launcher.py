@@ -41,7 +41,7 @@ import click
 import humanize
 
 import config
-from bot import Sirius
+from sirius import Sirius
 from utils.database import DatabaseManager
 from utils.modules import get_all_extensions
 
