@@ -210,7 +210,7 @@ class Mod(commands.Cog, name='Moderação'):
             return all(pred(m) for pred in predicates)
 
         deleted = await ctx.channel.purge(limit=amount, before=before, after=after, check=predicate)
-        await ctx.reply(f'Removi `{len(deleted)}` mensagens com sucesso.')
+        await ctx.reply(f'Removi `{len(deleted)}` mensagens com sucesso.', delete_after=5)
 
     @commands.Cog.listener()
     async def on_mute_complete(self, timer: Timer):

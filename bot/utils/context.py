@@ -44,7 +44,8 @@ class Context(commands.Context):
     async def reply(self, content: str = None, **kwargs):
         '''Este método foi sobrescrito para enviar ``Embed`` automaticamente.'''
         embed = kwargs.get('embed', self.get_embed(content, **kwargs))
-        return await super().reply(embed=embed)
+        delete_after = kwargs.pop('delete_after', None)
+        return await super().reply(embed=embed, delete_after=delete_after)
 
     async def prompt(self, content: str):
         menu = ConfirmMenu(content)
