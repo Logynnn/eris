@@ -25,6 +25,7 @@ SOFTWARE.
 import typing
 import re
 import json
+from typing import Optional
 
 import discord
 import humanize
@@ -155,7 +156,7 @@ class Mod(commands.Cog, name='Moderação'):
     @flags.add_flag('--reactions', action='store_const', const=lambda m: len(m.reactions))
     @flags.add_flag('--after', type=int)
     @flags.add_flag('--before', type=int)
-    async def clear(self, ctx: commands.Context, amount: int = 100, **flags):
+    async def clear(self, ctx: commands.Context, amount: Optional[int] = 100, **flags):
         predicates = []
         amount = max(0, min(2000, amount))
 
