@@ -22,14 +22,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
-from typing import Optional
+import functools
+from typing import Optional, Callable
 
 import asyncpg
 import discord
 from discord.ext import commands
 
 from utils import database
-from utils.menus import Menu
+from utils import menus
 from utils import checks
 
 
@@ -68,12 +69,6 @@ class Guild:
                         for user_id in members if user_id != owner_id]
 
     async def delete(self, forced: bool = False):
-        term = 'esta' if forced else 'sua'
-
-        result = await self._ctx.prompt(f'Você realmente deseja deletar {term} guilda?')
-        if not result:
-            return
-
         query = '''
             DELETE FROM guilds
             WHERE id = $1
@@ -179,18 +174,14 @@ class Guilds(commands.Cog, name='Guildas'):
         await ctx.reply(f'Você criou a guilda `{name}`.')
 
     @guild.command(name='delete', aliases=['del'])
+    @checks.is_guild_owner()
+    @menus.confirm('Você realmente quer deletar sua guilda?')
     async def guild_delete(self, ctx: commands.Context):
-        guild = await self.get_guild(ctx, ctx.author.id)
-        if not guild:
-            return await ctx.reply('Você não possui uma guilda.')
-
-        if guild.owner.id != ctx.author.id:
-            return await ctx.reply('Você não é o dono dessa guilda.')
-
-        await guild.delete()
+        await ctx.member_guild.delete()
 
     @guild.command(name='forcedelete', aliases=['fdelete', 'fdel'])
     @checks.is_staffer()
+    @menus.confirm('Você realmente quer deletar esta guilda?')
     async def guild_forcedelete(self, ctx: commands.Context, *, guild: GuildConverter):
         if not guild:
             return await ctx.reply('Guilda não encontrada.')

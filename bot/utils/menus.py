@@ -22,10 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
+import functools
+from typing import List, Mapping, Callable
+
 import discord
 from discord.ext import commands, menus
-
-from typing import List, Mapping
 
 
 class _MenuBase(menus.Menu):
@@ -177,3 +178,17 @@ class HelpPaginator(menus.ListPageSource):
 class HelpMenu(_MenuPagesBase):
     def __init__(self, data):
         super().__init__(HelpPaginator(data), clear_reactions_after=True)
+
+
+def confirm(message: str):
+    def wrapper(func: Callable):
+        @functools.wraps(func)
+        async def wrapped(self, ctx: commands.Context, *args, **kwargs):
+            result = await ctx.prompt(message)
+            
+            if not result:
+                return
+
+            return await func(self, ctx, *args, **kwargs)
+        return wrapped
+    return wrapper

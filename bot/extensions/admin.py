@@ -24,6 +24,8 @@ SOFTWARE.
 
 from discord.ext import commands
 
+from utils import menus
+
 
 class Admin(commands.Cog, name='Administração'):
     def __init__(self, bot: commands.Bot):
@@ -42,6 +44,11 @@ class Admin(commands.Cog, name='Administração'):
     async def dev_shutdown(self, ctx: commands.Context):
         await ctx.reply('Certo, voltarei em breve! 👋')
         await ctx.bot.logout()
+
+    @commands.command()
+    @menus.confirm('teste')
+    async def test(self, ctx):
+        pass
 
 
 def setup(bot: commands.Bot):

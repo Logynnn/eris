@@ -22,6 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
+import functools
+from typing import Callable
+
 from discord.ext import commands
 
 from .constants import PREMIUM_ROLES
@@ -39,3 +42,21 @@ def is_staffer():
         return ctx.bot.staff_role in ctx.author.roles
 
     return commands.check(predicate)
+
+
+def is_guild_owner():
+    def wrapper(func: Callable):
+        @functools.wraps(func)
+        async def wrapped(self, ctx: commands.Context, *args, **kwargs):
+            guild = await self.get_guild(ctx, ctx.author.id)
+
+            if not guild:
+                return await ctx.reply('Você não possui uma guilda.')
+
+            if guild.owner != ctx.author:
+                return await ctx.reply('Você não é o dono desta guilda.')
+
+            ctx.member_guild = guild
+            return await func(self, ctx, *args, **kwargs)
+        return wrapped
+    return wrapper
