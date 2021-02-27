@@ -149,14 +149,10 @@ class Mod(commands.Cog, name='Moderação'):
     @flags.add_flag('--starts', type=str, nargs='+')
     @flags.add_flag('--ends', type=str, nargs='+')
     @flags.add_flag('--emoji', action='store_true')
-    @flags.add_flag('--bot', action='store_const',
-                    const=lambda m: m.author.bot)
-    @flags.add_flag('--embeds', action='store_const',
-                    const=lambda m: len(m.embeds))
-    @flags.add_flag('--files', action='store_const',
-                    const=lambda m: len(m.attachments))
-    @flags.add_flag('--reactions', action='store_const',
-                    const=lambda m: len(m.reactions))
+    @flags.add_flag('--bot', action='store_const', const=lambda m: m.author.bot)
+    @flags.add_flag('--embeds', action='store_const', const=lambda m: len(m.embeds))
+    @flags.add_flag('--files', action='store_const', const=lambda m: len(m.attachments))
+    @flags.add_flag('--reactions', action='store_const', const=lambda m: len(m.reactions))
     @flags.add_flag('--after', type=int)
     @flags.add_flag('--before', type=int)
     async def clear(self, ctx: commands.Context, amount: int = 100, **flags):
@@ -167,22 +163,20 @@ class Mod(commands.Cog, name='Moderação'):
             predicates.append(lambda m: m.author in flags['user'])
 
         if flags['contains']:
-            predicates.append(
-                lambda m: any(
-                    sub in m.content for sub in flags['contains']))
+            pred = lambda m: any(sub in m.content for sub in flags['contains'])
+            predicates.append(pred)
 
         if flags['starts']:
-            predicates.append(lambda m: any(m.content.startswith(s)
-                                            for s in flags['starts']))
+            pred = lambda m: any(m.content.startswith(s) for s in flags['starts'])
+            predicates.append(pred)
 
         if flags['ends']:
-            predicates.append(lambda m: any(m.content.endswith(s)
-                                            for s in flags['ends']))
+            pred = lambda m: any(m.content.endswith(s) for s in flags['ends'])
+            predicates.append(pred)
 
         if flags['emoji']:
-            predicates.append(
-                lambda m: self.bot._emoji_regex.search(
-                    m.content))
+            pred = lambda m: self.bot._emoji_regex.search(m.content)
+            predicates.append(pred)
 
         if flags['bot']:
             predicates.append(flags['bot'])
