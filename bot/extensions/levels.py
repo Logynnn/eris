@@ -117,24 +117,15 @@ class Levels(commands.Cog, name='Ranking'):
         user_level = Levels._get_level_from_exp(user_exp)
 
         roles = self._level_roles.values()
-        await member.remove_roles(roles, reason='Removendo cargo de níveis anteriores')
+        await member.remove_roles(*roles, reason='Removendo cargo de níveis anteriores')
 
-        latest_role = None
+        role = self._level_roles.get(user_level)
 
-        for level, role in self._level_roles.items():
-            if level == user_level:
-                continue
-
-            if role in member.roles:
-                continue
-
-            latest_role = role
-
-        if not latest_role:
+        if not role:
             return None
-        
-        await member.add_roles(latest_role, reason=f'Usuário subiu para o nível {level}')
-        return latest_role.mention
+
+        await member.add_roles(role, reason=f'Usuário subiu para o nível {level}')
+        return role.mention
 
     @commands.command()
     async def rank(self, ctx: commands.Context):
