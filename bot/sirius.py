@@ -91,6 +91,10 @@ class Sirius(commands.Bot):
         return self.cosmic.get_role(self.constants.MUTE_ROLE_ID)
 
     @property
+    def notifications_role(self) -> discord.Role:
+        return self.cosmic.get_role(self.constants.NOTIFICATIONS_ROLE_ID)
+
+    @property
     def log_channel(self) -> discord.TextChannel:
         return self.cosmic.get_channel(self.constants.LOG_CHANNEL_ID)
 
