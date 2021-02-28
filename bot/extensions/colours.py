@@ -50,6 +50,7 @@ class Colours(commands.Cog, name='Cores'):
         self.colours = [r for r in cosmic.roles if r.name.startswith('「🎨」')]
 
     @commands.group(aliases=['color'], invoke_without_command=True)
+    @checks.is_premium()
     async def colour(self, ctx: commands.Context, *, colour: ColourConverter):
         await self.colour_add(ctx, colour=colour)
 
