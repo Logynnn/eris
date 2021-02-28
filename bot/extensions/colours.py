@@ -27,6 +27,13 @@ from discord.ext import commands
 
 from utils.menus import Menu
 from utils import checks
+from utils import database
+
+
+class ColoursTable(database.Table, table_name='colours'):
+    user_id = database.Column(database.Integer(big=True), primary_key=True, index=True)
+    colours = database.Column(database.Array(database.Integer(big=True)))
+    fragments = database.Column(database.JSON, default="'{}'::jsonb")
 
 
 class ColourConverter(commands.Converter):
@@ -44,19 +51,32 @@ class Colours(commands.Cog, name='Cores'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    async def has_color(self, member: discord.Member, colour: discord.Role):
+        if any(r in self.bot.premium_roles for r in member.roles):
+            return True
+
+        query = 'SELECT colours FROM colours WHERE user_id = $1'
+        fetch = await self.bot.manager.fetch_row(query, member.id)
+
+        if not fetch:
+            return False
+
+        return colour.id in fetch['colours']
+
     @commands.Cog.listener()
     async def on_first_ready(self):
         cosmic = self.bot.cosmic
         self.colours = [r for r in cosmic.roles if r.name.startswith('「🎨」')]
 
     @commands.group(aliases=['color'], invoke_without_command=True)
-    @checks.is_premium()
     async def colour(self, ctx: commands.Context, *, colour: ColourConverter):
         await self.colour_add(ctx, colour=colour)
 
     @colour.command(name='add')
-    @checks.is_premium()
     async def colour_add(self, ctx: commands.Context, *, colour: ColourConverter):
+        if not await self.has_color(ctx.author, colour):
+            return await ctx.reply('Você não possui esta cor.')
+
         if not colour:
             return await ctx.reply('Cor não encontrada.')
 
