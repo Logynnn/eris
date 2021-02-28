@@ -45,11 +45,6 @@ class Admin(commands.Cog, name='Administração'):
         await ctx.reply('Certo, voltarei em breve! 👋')
         await ctx.bot.logout()
 
-    @commands.command()
-    @menus.confirm('teste')
-    async def test(self, ctx):
-        pass
-
 
 def setup(bot: commands.Bot):
     bot.add_cog(Admin(bot))
