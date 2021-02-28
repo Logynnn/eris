@@ -31,11 +31,14 @@ http://mozilla.org/MPL/2.0/.
 '''
 
 import logging
+import re
 from datetime import timezone
 
 import discord
 from discord.ext import commands
 from discord.ext.commands import CooldownMapping, BucketType
+
+from utils.time import FutureTime
 
 
 log = logging.getLogger(__name__)
@@ -87,9 +90,40 @@ class Spam(commands.Cog):
             log.info(fmt.format(author))
             return True
 
+    async def check_invites(self, message: discord.Message) -> bool:
+        author = message.author
+        content = message.content
+
+        if self.bot.staff_role in author.roles:
+            return
+
+        match = self.bot._invite_regex.search(content)
+
+        if not match or not match.group(0):
+            return False
+
+        invites = [invite.url for invite in await message.guild.invites()]
+        url = match.group(0)
+
+        if url.replace('http://', 'https://') in invites:
+            return False
+
+        try:
+            await message.author.kick(reason='Autokick from advertisement')
+        except Exception:
+            fmt = 'Failed to autokick {0} ({0.id}) by advertisement'
+        else:
+            fmt = 'Kicked {0} ({0.id}) by advertisement'
+        finally:
+            log.info(fmt.format(author))
+            return True
+
     @commands.Cog.listener()
     async def on_regular_message(self, message: discord.Message):
         author = message.author
+
+        if await self.check_invites(message):
+            return
 
         if len(author.roles):
             return
