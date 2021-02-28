@@ -68,8 +68,6 @@ class SpamChecker:
 class Spam(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-
-        log = logging.getLogger('sirius.spam')
         self.spam_checker = SpamChecker()
 
     async def check_raid(self, message: discord.Message) -> bool:
