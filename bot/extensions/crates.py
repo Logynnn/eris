@@ -32,16 +32,12 @@ raw = {
         'emoji': '<:WoodenCrate:813475171859955785>',
         'image': 'https://i.imgur.com/wmeHKBd.png',
         'items': [
-            # ('give_coins', (150, 220))
             {
                 'weight': 0.6,
                 'func': 'give_coins',
                 'args': (100, 150)
             }
         ]
-        # 'code': dedent('''
-        #     await ctx.send('teste')
-        # ''')
     }
 }
 
@@ -74,6 +70,12 @@ class Crate:
         await self.bot.manager.execute(query, member.id)
 
     async def open(self, ctx: commands.Context):
+        query = "SELECT inventory->'crates'->$2 AS count FROM profiles WHERE user_id = $1"
+        fetch = await ctx.bot.manager.fetch_row(query, ctx.author.id, self.name)
+
+        if not fetch or fetch['count'] <= 0:
+            return await ctx.reply('Você não possui esta caixa.')
+
         weights = [item['weight'] for item in self.items]
         item = random.choices(self.items, weights=weights)[0]
 
@@ -81,6 +83,17 @@ class Crate:
         args = item['args']
 
         await func(ctx, *args)
+
+        query = '''
+            UPDATE profiles
+            SET inventory = (
+                jsonb_set(inventory, '{crates,name}', (
+                    (inventory#>>'{crates,name}')::int - 1)::text::jsonb
+                )
+            )
+            WHERE user_id = $1
+        '''.replace('name', self.name)
+        await self.bot.manager.execute(query, ctx.author.id)
 
     # rewards
     async def _give_coins(self, ctx: commands.Context, min: int, max: int):
