@@ -127,6 +127,7 @@ class DroppableCrate(Crate):
         except asyncio.TimeoutError:
             return await message.delete()
         else:
+            await message.delete()
             await self.add_to_member(user)
 
             description = 'Parabéns, a caixa foi adicionada em seu inventário.'
