@@ -213,6 +213,22 @@ class ForeignKey(SQLType):
         return fmt.format(self)
 
 
+class Array(SQLType):
+    python = list
+
+    def __init__(self, sql_type: SQLType):
+        if inspect.isclass(sql_type):
+            sql_type = sql_type()
+
+        if not isinstance(sql_type, SQLType):
+            raise TypeError('Cannot have non-SQLType derived sql_type')
+
+        self.sql_type = sql_type.to_sql()
+
+    def to_sql(self):
+        return f'{self.sql_type} ARRAY'
+
+
 class Column:
     __slots__ = (
         'column_type', 'index', 'primary_key', 'nullable',
