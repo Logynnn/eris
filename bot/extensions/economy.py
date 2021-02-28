@@ -33,11 +33,34 @@ class Economy(commands.Cog, name='Economia'):
         self.bot = bot
         self.coin_emoji = bot.constants.G_COIN_EMOJI
 
+    @commands.Cog.listener()
+    async def on_first_ready(self):
+        self.cache = self.bot.cache
+        await self.populate_cache() 
+
+    async def populate_cache(self):
+        query = 'SELECT user_id, coins FROM profiles'
+        fetch = await self.bot.manager.fetch(query)
+
+        for record in fetch:
+            user_id = record['user_id']
+            coins = record['coins']
+
+            await self.cache.set(f'economy:member:{user_id}:coins', coins)
+
     async def insert_user(self, ctx: commands.Context):
         member = ctx.kwargs.get('member') or ctx.author
 
+        await self.cache.setnx(f'economy:member:{member.id}:coins', 0)
+
         query = 'INSERT INTO profiles VALUES ($1) ON CONFLICT (user_id) DO NOTHING'
         await ctx.bot.manager.execute(query, member.id)
+
+    async def add_coins(self, user_id: int, coins: int):
+        await self.cache.incrby(f'economy:member:{user_id}:coins', coins)
+
+        query = 'UPDATE profiles SET coins = coins + $2 WHERE user_id = $1'
+        await self.bot.manager.execute(query, user_id, coins)
 
     @commands.command()
     @commands.cooldown(1, 86400, commands.BucketType.member)
@@ -46,8 +69,7 @@ class Economy(commands.Cog, name='Economia'):
         member = member or ctx.author
         to_add = random.randint(120, 160)
 
-        query = 'UPDATE profiles SET coins = coins + $2 WHERE user_id = $1'
-        await ctx.bot.manager.execute(query, member.id, to_add)
+        await self.add_coins(member.id, to_add)
 
         mention = 'Você' if member == ctx.author else member.mention
         await ctx.reply(f'{mention} recebeu {to_add} {self.coin_emoji}.')
@@ -57,10 +79,7 @@ class Economy(commands.Cog, name='Economia'):
         member = member or ctx.author
         mention = 'Você' if member == ctx.author else member.mention
 
-        query = 'SELECT coins FROM profiles WHERE user_id = $1'
-        fetch = await ctx.bot.manager.fetch_row(query, member.id)
-
-        coins = fetch['coins'] if fetch else 0
+        coins = await self.cache.get(f'economy:member:{member.id}:coins') or 0
         await ctx.reply(f'{mention} possui {coins} {self.coin_emoji}.')
 
 
