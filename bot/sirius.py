@@ -124,6 +124,7 @@ class Sirius(commands.Bot):
             +\.(?:jpg|jpeg|png|gif|webp)$''',
             re.VERBOSE)
         self._emoji_regex = re.compile(r'<:(\w+):(\d+)>')
+        self._invite_regex = re.compile(r'(?:https?://)?discord(?:app)?\.(?:com/invite|gg)/[a-zA-Z0-9]+/?', re.VERBOSE)
 
         log.info(f'{self.__class__.__name__} is ready to go.')
 
