@@ -46,8 +46,6 @@ class LevelsTable(database.Table, table_name='levels'):
 class Levels(commands.Cog, name='Ranking'):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-
-        log = logging.getLogger('sirius.levels')
         self.cooldown = CooldownMapping.from_cooldown(1, 60, BucketType.user)
 
     @staticmethod
