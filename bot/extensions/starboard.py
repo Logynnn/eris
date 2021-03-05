@@ -97,7 +97,7 @@ class Starboard(commands.Cog):
     @commands.Cog.listener()
     async def on_first_ready(self):
         self.cosmic = self.bot.cosmic
-        self.startboard = self.cosmic.get_channel(
+        self.starboard = self.cosmic.get_channel(
             self.bot.constants.STARBOARD_CHANNEL_ID)
 
     @tasks.loop(hours=1)
