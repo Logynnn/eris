@@ -107,6 +107,10 @@ class Eris(commands.Bot):
         return self.cosmic.get_channel(self.constants.ERRORS_CHANNEL_ID)
 
     @property
+    def logger_channel(self) -> discord.TextChannel:
+        return self.cosmic.get_channel(self.constants.LOGGER_CHANNEL_ID)
+
+    @property
     def color(self) -> discord.Color:
         return self.cosmic.me.color
 
