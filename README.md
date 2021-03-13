@@ -1,4 +1,4 @@
-# Sirius
+# eris
 O bot pessoal e privado do servidor [Cosmic ✨](https://discord.gg/SsfvNvNEZR).
 
 ## Rodando
@@ -17,8 +17,8 @@ pip install -r requirements.txt
 ```
 2. Crie o banco de dados no PostgreSQL.
 ```sql
-CREATE ROLE sirius WITH LOGIN PASSWORD 'sua_senha';
-CREATE DATABASE sirius OWNER sirius;
+CREATE ROLE eris WITH LOGIN PASSWORD 'sua_senha';
+CREATE DATABASE eris OWNER eris;
 ```
 3. Configurando arquivos.
 
@@ -29,7 +29,7 @@ token = '<token_do_bot>'
 prefix = '<prefixo>'
 
 # banco de dados e cache
-postgres = 'postgres://sirius:<senha>@<host>/sirius' # suas informações de cima
+postgres = 'postgres://eris:<senha>@<host>/eris' # suas informações de cima
 redis = 'redis://<host>'
 ```
 4. Configurando o banco de dados.

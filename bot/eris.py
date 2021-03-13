@@ -45,7 +45,7 @@ log = logging.getLogger(__name__)
 
 # TODO: Adicionar uma documentação decente.
 
-class Sirius(commands.Bot):
+class Eris(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix=config.prefix, intents=discord.Intents.all())
         

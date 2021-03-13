@@ -41,7 +41,7 @@ import click
 import humanize
 
 import config
-from sirius import Sirius
+from eris import Eris
 from utils.database import DatabaseManager
 from utils.modules import get_all_extensions
 
@@ -78,7 +78,7 @@ def setup_logging():
         datetime_format = '%Y-%m-%d %H:%M:%S'
 
         handler = logging.FileHandler(
-            filename='logs/sirius.log',
+            filename='logs/eris.log',
             mode='w',
             encoding='utf-8')
         formatter = logging.Formatter(
@@ -100,7 +100,7 @@ def setup_logging():
 def run_bot():
     humanize.activate('pt_BR')
 
-    bot = Sirius()
+    bot = Eris()
     run = bot.loop.run_until_complete
 
     bot.manager = run(DatabaseManager.from_dsn(config.postgres, loop=bot.loop))
