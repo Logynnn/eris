@@ -30,23 +30,30 @@ obtain one at
 http://mozilla.org/MPL/2.0/.
 '''
 
-import contextlib
-import logging
-import asyncio
-import traceback
-import importlib
-from pathlib import Path
-
+import colorama
 import click
-import humanize
+import asyncio
+import importlib
+import traceback
+import logging
+import contextlib
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 import config
 from eris import Eris
-from utils.database import DatabaseManager
+from utils.database import create_pool, Table
 from utils.modules import get_all_extensions
 
 
-# TODO: Adicionar uma documentação decente.
+colorama.init()
+
+
+GREEN = colorama.Fore.LIGHTGREEN_EX
+RED   = colorama.Fore.LIGHTRED_EX
+DIM   = colorama.Style.DIM
+RESET = colorama.Style.RESET_ALL
+
 
 class RemoveNoise(logging.Filter):
     def __init__(self):
@@ -55,36 +62,33 @@ class RemoveNoise(logging.Filter):
     def filter(self, record: logging.LogRecord):
         if record.levelname == 'WARNING' and 'referencing an unknown' in record.msg:
             return False
-
         return True
 
 
 @contextlib.contextmanager
 def setup_logging():
-    # Criar a past logs/ antes de inicializar o logger.
+    # Criar a pasta `logs/` antes de inicializar o logger.
     path = Path('logs')
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
 
     try:
         # __enter__
+        max_bytes = 32 * 1024 * 1024 # 32 MiB
+
         logging.getLogger('discord').setLevel(logging.INFO)
-        logging.getLogger('discord.http').setLevel(logging.WARNING)
+        logging.getLogger('discord.http').setLevel(logging.WARN)
         logging.getLogger('discord.state').addFilter(RemoveNoise())
 
         logger = logging.getLogger()
         logger.setLevel(logging.INFO)
 
-        datetime_format = '%Y-%m-%d %H:%M:%S'
+        dt_format = r'%Y-%m-%d %H:%M:%S'
+        log_format = '[{asctime}] [{levelname}] {name}: {message}'
 
-        handler = logging.FileHandler(
-            filename='logs/eris.log',
-            mode='w',
-            encoding='utf-8')
-        formatter = logging.Formatter(
-            '[{asctime}] [{levelname}] {name}: {message}',
-            datetime_format,
-            style='{')
+        kwargs = {'filename': 'logs/eris.log', 'encoding': 'utf-8', 'mode': 'w'}
+        handler = RotatingFileHandler(**kwargs, maxBytes=max_bytes, backupCount=5)
+        formatter = logging.Formatter(log_format, dt_format, style='{')
 
         handler.setFormatter(formatter)
         logger.addHandler(handler)
@@ -98,20 +102,15 @@ def setup_logging():
 
 
 def run_bot():
-    humanize.activate('pt_BR')
-
     bot = Eris()
-    run = bot.loop.run_until_complete
-
-    bot.manager = run(DatabaseManager.from_dsn(config.postgres, loop=bot.loop))
     bot.run(config.token)
 
 
 @click.group(invoke_without_command=True, options_metavar='[options]')
 @click.pass_context
 def main(ctx: click.Context):
-    '''Inicia o bot.'''
-    if ctx.invoked_subcommand is None:
+    '''Inicializa o bot.'''
+    if not ctx.invoked_subcommand:
         with setup_logging():
             run_bot()
 
@@ -121,28 +120,31 @@ def db():
     pass
 
 
-@db.command(short_help='inicializa o banco de dados',
-            options_metavar='[options]')
+@db.command(short_help='inicializa o banco de dados', options_metavar='[options]')
 @click.option('-q', '--quiet', help='output menos detalhado', is_flag=True)
 def init(quiet: bool):
-    '''Faz a criação do banco de dados para você.'''
+    '''Faz  a criação das tabelas do PostgreSQL automaticamente.'''
     loop = asyncio.get_event_loop()
     run = loop.run_until_complete
 
-    try:
-        manager = run(DatabaseManager.from_dsn(config.postgres, loop=loop))
-    except Exception:
-        return click.echo(
-            f'Could not create PostgreSQL connection pool\n{traceback.format_exc()}', err=True)
+    pool = run(create_pool(config.postgres, loop=loop))
 
     for ext in get_all_extensions():
         try:
             importlib.import_module(ext)
         except Exception:
-            return click.echo(
-                f'Could not load {ext}\n{traceback.format_exc()}', err=True)
+            print(DIM + traceback.format_exc() + RESET, end='')
+            print(RED + f"Could not load '{ext}'" + RESET)
+            return
 
-    run(manager.initialize())
+    for table in Table.all_tables():
+        try:
+            run(table.create(pool, verbose=not quiet))
+        except Exception:
+            print(DIM + traceback.format_exc() + RESET, end='')
+            print(RED + f"Could not create table '{table.__table_name__}'" + RESET)
+        else:
+            click.echo(GREEN + f"[{table.__module__}] Created table '{table.__table_name__}'" + RESET)
 
 
 if __name__ == '__main__':

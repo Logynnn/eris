@@ -32,22 +32,22 @@ http://mozilla.org/MPL/2.0/.
 
 from asyncio import AbstractEventLoop
 
-from aioredis import Redis, create_redis_pool
+from aiohttp import BaseConnector, ClientSession
 
 
-async def create_cache(address: str, *, loop: AbstractEventLoop) -> Redis:
-    '''Sessão do Redis para cache.
+async def create_session(*, connector: BaseConnector, loop: AbstractEventLoop) -> ClientSession:
+    '''Cria uma sessão HTTP.
 
     Parameters
     ----------
-    address: :class:`str`
-        O endereço do servidor Redis.
+    connector: :class:`BaseConnector`
+        Instância de uma `BaseConnector` para oferecer suporte ao pool de conexão.
     loop: :class:`AbstractEventLoop`
         O loop assíncrono de eventos.
 
     Returns
     -------
-    :class:`Redis`
-        Uma instância de uma sessão do Redis.
+    ClientSession
+        Uma instância de uma sessão HTTP.
     '''    
-    return await create_redis_pool(address=address, loop=loop, encoding='utf-8')
+    return ClientSession(connector=connector, loop=loop)

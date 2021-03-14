@@ -21,162 +21,157 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
+'''
+This Source Code Form is subject to the
+terms of the Mozilla Public License, v.
+2.0. If a copy of the MPL was not
+distributed with this file, You can
+obtain one at
+http://mozilla.org/MPL/2.0/.
+'''
 
-import os
-import re
 import logging
-import importlib
-from typing import List
-
+import traceback
+import colorama
 import discord
 from discord.ext import commands
 
 import config
-from utils.context import Context
-from utils.modules import get_all_extensions
-from utils.cache import create_cache
+from utils import http
+from utils import cache
+from utils import database
+from utils import modules
+from utils.context import ErisContext
 
 
+# Quando for remover o Jishaku.
+import os
 os.environ['JISHAKU_NO_UNDERSCORE'] = 'True'
 os.environ['JISHAKU_NO_DM_TRACEBACK'] = 'True'
+
 
 log = logging.getLogger(__name__)
 
 
-# TODO: Adicionar uma documentação decente.
+DIM    = colorama.Style.DIM
+YELLOW = colorama.Fore.LIGHTYELLOW_EX
+RED    = colorama.Fore.LIGHTRED_EX
+GREEN  = colorama.Fore.LIGHTGREEN_EX
+RESET  = colorama.Style.RESET_ALL
+
+
+COSMIC_GUILD_ID = 795017809402921041
+STAFF_ROLE_ID   = 795026574453899304
+
 
 class Eris(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix=config.prefix, intents=discord.Intents.all())
-        
-        self._first_start = True
-        run = self.loop.run_until_complete
+        intents = discord.Intents.all()
+        super().__init__(command_prefix=get_prefix, intents=intents)
 
-        self.cache = run(create_cache(config.redis, loop=self.loop))
+        loop = self.loop
+        run = loop.run_until_complete
 
-        log.info('Starting to load initial extensions.')
-        for name in get_all_extensions():
-            self.load_extension(name)
+        self.is_first_launch = True
+        self.default_prefix = '?'
 
-        # carregar jishaku separadamente.
+        # Criar sessão HTTP com `aiohttp`.
+        log.info('Creating client HTTP session.')
+        self.session = run(http.create_session(connector=self.http.connector, loop=loop))
+
+        # Criar conexão com o Redis (cache).
+        log.info('Creating connection with Redis.')
+        self.cache = run(cache.create_cache(config.redis, loop=loop))
+
+        # Criar conexão com o PostgreSQL (banco de dados).
+        log.info('Creating connection with PostgreSQL.')
+        self.pool = run(database.create_pool(config.postgres, loop=loop))
+
+        # Carregar as extensões do bot.
+        log.info('Loading all initial extensions.')
+        for ext in modules.get_all_extensions():
+            self.load_extension(ext)
+
+        # Carregar o Jishaku já que ele será útil por enquanto.
         self.load_extension('jishaku')
 
-    @property
-    def constants(self):
-        return importlib.import_module('utils.constants')
+        # Dispachar um evento para que cada cog
+        # faça suas configurações necessárias.
+        self.dispatch('bot_load')
 
     @property
     def cosmic(self) -> discord.Guild:
-        return self.get_guild(self.constants.COSMIC_GUILD_ID)
+        return self.get_guild(COSMIC_GUILD_ID)
 
     @property
     def staff_role(self) -> discord.Role:
-        return self.cosmic.get_role(self.constants.STAFF_ROLE_ID)
-
-    @property
-    def administrator_role(self) -> discord.Role:
-        return self.cosmic.get_role(self.constants.ADMINISTRATOR_ROLE_ID)
-
-    @property
-    def nitro_booster_role(self) -> discord.Role:
-        return self.cosmic.get_role(self.constants.NITRO_BOOSTER_ROLE_ID)
-
-    @property
-    def premium_roles(self) -> List[discord.Role]:
-        PREMIUM_ROLES = self.constants.PREMIUM_ROLES
-        return [self.cosmic.get_role(role_id) for role_id in PREMIUM_ROLES]
-
-    @property
-    def mute_role(self) -> discord.Role:
-        return self.cosmic.get_role(self.constants.MUTE_ROLE_ID)
-
-    @property
-    def notifications_role(self) -> discord.Role:
-        return self.cosmic.get_role(self.constants.NOTIFICATIONS_ROLE_ID)
-
-    @property
-    def log_channel(self) -> discord.TextChannel:
-        return self.cosmic.get_channel(self.constants.LOG_CHANNEL_ID)
-
-    @property
-    def general_channel(self) -> discord.TextChannel:
-        return self.cosmic.get_channel(self.constants.GENERAL_CHANNEL_ID)
-
-    @property
-    def errors_channel(self) -> discord.TextChannel:
-        return self.cosmic.get_channel(self.constants.ERRORS_CHANNEL_ID)
-
-    @property
-    def logger_channel(self) -> discord.TextChannel:
-        return self.cosmic.get_channel(self.constants.LOGGER_CHANNEL_ID)
-
-    @property
-    def color(self) -> discord.Color:
-        return self.cosmic.me.color
-
-    async def on_ready(self):
-        if self._first_start:
-            self._first_start = False
-            self.dispatch('first_ready')
-
-        print(f'Online com {len(self.users)} usuários')
-
-    async def on_first_ready(self):
-        self._image_url_regex = re.compile(
-            r'''http[s]?://
-            (?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*(),]|(?:%[0-9a-fA-F][0-9a-fA-F]))
-            +\.(?:jpg|jpeg|png|gif|webp)$''',
-            re.VERBOSE)
-        self._emoji_regex = re.compile(r'<:(\w+):(\d+)>')
-        self._invite_regex = re.compile(r'(?:https?://)?discord(?:app)?\.(?:com/invite|gg)/[a-zA-Z0-9]+/?', re.VERBOSE)
-
-        log.info(f'{self.__class__.__name__} is ready to go.')
-
-    async def on_message(self, message: discord.Message):
-        # não quero ver mensagens enquanto o bot não estiver pronto.
-        if not self.is_ready():
-            return
-
-        if not isinstance(message.author, discord.Member):
-            return
-
-        if message.author.bot:
-            return
-
-        if message.guild != self.cosmic:
-            return
-
-        self.dispatch('regular_message', message)
-        await self.process_commands(message)
+        return self.cosmic.get_role(STAFF_ROLE_ID)
 
     def load_extension(self, name: str):
         try:
             super().load_extension(name)
         except Exception:
             log.exception(f"Extension '{name}' could not be loaded.")
+
+            print(DIM + traceback.format_exc() + RESET, end='')
+            print(RED + f"[{name}] Extensão não pôde ser carregada." + RESET)
         else:
             log.info(f"Extension '{name}' has been loaded.")
 
-    def unload_extension(self, name: str):
-        try:
-            super().unload_extension(name)
-        except Exception:
-            log.exception(f"Extension '{name}' could not be unloaded.")
-        else:
-            log.info(f"Extension '{name}' has been unloaded.")
-
-    def reload_extension(self, name: str):
-        try:
-            super().reload_extension(name)
-        except Exception:
-            log.exception(f"Extension '{name}' could not be reloaded.")
-        else:
-            log.info(f"Extension '{name}' has been reloaded.")
+            print(GREEN + f"[{name}] Extensão carregada com sucesso." + RESET)
 
     async def process_commands(self, message: discord.Message):
-        ctx = await self.get_context(message, cls=Context)
+        # Nós sobrescrevemos este método para usar no `Context` personalizado.
+        # Também removo umas condições que tinha aqui já que quero migrá-las 
+        # para o `on_message`.
+        ctx = await self.get_context(message, cls=ErisContext)
         await self.invoke(ctx)
 
-    def run(self, *args, **kwargs):
-        log.info(f'Trying to run {self.__class__.__name__}.')
-        super().run(*args, **kwargs)
+    async def on_ready(self):
+        if self.is_first_launch:
+            # Isso é necessário já que alguns cogs usam o evento `on_ready`
+            # para fazer coisas necessárias, ao mesmo tempo que não quero
+            # que esse evento seja disparado diversas vezes.
+            self.is_first_launch = False
+            self.dispatch('first_launch')
+
+            print(YELLOW + f'[{__name__}] Online com {len(self.users)} usuários.' + RESET)
+
+    async def on_message(self, message: discord.Message):
+        # Verifico se o autor da mensagem é uma instância
+        # de `Member`. Assim consigo evitar mensagens de
+        # webhooks.
+        if not isinstance(message.author, discord.Member):
+            return
+
+        if message.author.bot:
+            return
+
+        # Caso a mensagem passe pelas condições anteriores
+        # então eu dispacho um evento para ser usado em
+        # cogs que necessitam dessa mensagem "sanitizada".
+        self.dispatch('regular_message', message)
+
+        # E então eu processo a mensagem para um comando.
+        await self.process_commands(message)
+
+    async def close(self):
+        # Antes de fechar o bot, temos que fechar nossa sessão HTTP.
+        # Caso contrário, o `aiohttp` irá reclamar que não fechamos
+        # a sessão.
+        log.info('Closing client HTTP session.')
+        await self.session.close()
+
+        await super().close()
+
+
+async def get_prefix(bot: Eris, message: discord.Message) -> list[str]:
+    # Tenta obter um prefixo personalizado no cache.
+    # Caso não consiga, usa o prefix padrão `?`.
+    # `eris ` é um prefixo global e não pode ser mudado.
+    prefix = await bot.cache.get(f'config/user/{message.author.id}/prefix')
+
+    if prefix is None:
+        prefix = bot.default_prefix
+
+    return ['eris ', prefix]

@@ -21,19 +21,31 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
+'''
+This Source Code Form is subject to the
+terms of the Mozilla Public License, v.
+2.0. If a copy of the MPL was not
+distributed with this file, You can
+obtain one at
+http://mozilla.org/MPL/2.0/.
+'''
 
 import discord
 from discord.ext import commands
 
+from eris import Eris
+
 
 class Status(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    '''Define o status para o bot.'''
+
+    def __init__(self, bot: Eris):
         self.bot = bot
 
     async def update_status(self):
         users = len(self.bot.users)
 
-        name = f'{users} usuários'
+        name = f'?help | {users} usuários'
         activity_type = discord.ActivityType.listening
 
         activity = discord.Activity(name=name, type=activity_type)
@@ -42,17 +54,17 @@ class Status(commands.Cog):
         await self.bot.change_presence(activity=activity, status=status)
 
     @commands.Cog.listener()
-    async def on_first_ready(self):
+    async def on_first_launch(self):
         await self.update_status()
 
     @commands.Cog.listener()
-    async def on_member_join(self, guild: discord.Guild):
+    async def on_member_join(self, member: discord.Member):
         await self.update_status()
 
     @commands.Cog.listener()
-    async def on_member_remove(self, guild: discord.Guild):
+    async def on_member_remove(self, member: discord.Member):
         await self.update_status()
 
 
-def setup(bot: commands.Bot):
+def setup(bot: Eris):
     bot.add_cog(Status(bot))

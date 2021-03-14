@@ -21,15 +21,34 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
+'''
+This Source Code Form is subject to the
+terms of the Mozilla Public License, v.
+2.0. If a copy of the MPL was not
+distributed with this file, You can
+obtain one at
+http://mozilla.org/MPL/2.0/.
+'''
 
 import os
 import re
-from typing import List
 
 
-def get_all_extensions(path: str = 'extensions/') -> List[str]:
+def get_all_extensions(path: str = 'extensions/') -> list[str]:
+    '''Retorna a lista de extensões do `path` indicado.
+
+    Parameters
+    ----------
+    path: Optional[class:`str`]
+        O caminho para procurar extensões, por padrão `extensions/`.
+
+    Returns
+    -------
+    list[str]
+        A lista de extensões encontradas.
+    '''                
     extensions = []
-    
+
     for root, dirs, files in os.walk(path):
         for file in files:
             path = os.path.join(root, file)
@@ -41,8 +60,6 @@ def get_all_extensions(path: str = 'extensions/') -> List[str]:
             if ext != '.py':
                 continue
 
-            extension = re.sub(r'\\|\/', '.', path)
-            extensions.append(extension)
+            extensions.append(re.sub(r'\\|\/', '.', path))
 
     return extensions
-            
