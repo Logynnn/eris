@@ -30,99 +30,82 @@ obtain one at
 http://mozilla.org/MPL/2.0/.
 '''
 
-import asyncio
-import typing
-import inspect
 import json
-import click
-import traceback
-import datetime
+import typing
+from asyncio import AbstractEventLoop
 from collections import OrderedDict
 
 import asyncpg
+import colorama
+
+
+DIM   = colorama.Style.DIM
+RESET = colorama.Style.RESET_ALL
+
+
+async def create_pool(dsn: str, *, loop: AbstractEventLoop) -> asyncpg.Pool:
+    '''Criar um pool de conexão no PostgreSQL.
+
+    Parameters
+    ----------
+    dsn: :class:`str`
+        Argumentos de conexão especificadas em uma única string.
+    loop: :class:`AbstractEventLoop`
+        O loop assíncrono de eventos.
+    
+    Returns
+    -------
+    :class:`asyncpg.Pool`
+        Uma instância do pool de conexão do PostgreSQL.
+    '''
+
+    # As seguintes fazem que, quando o banco de dados
+    # retornar algum JSON, converta para um dicionário.
+    # Caso contrário uma `str` é retornada.
+    def _encode_jsonb(value):
+        return json.dumps(value)
+
+    def _decode_jsonb(value):
+        return json.loads(value)
+
+    async def init(conn: asyncpg.Connection):
+        await conn.set_type_codec('jsonb', schema='pg_catalog', encoder=_encode_jsonb, decoder=_decode_jsonb)
+
+    return await asyncpg.create_pool(dsn, loop=loop, init=init)
 
 
 class SchemaError(Exception):
     pass
 
 
-class DatabaseManager:
-    def __init__(self, pool: asyncpg.pool.Pool):
-        self._pool = pool
-
-    async def initialize(self):
-        for table in Table.all_tables():
-            try:
-                await table.create(self._pool, verbose=True)
-            except Exception:
-                click.echo(
-                    f'Could not create table {table.__table_name__}\n{traceback.format_exc()}',
-                    err=True)
-            else:
-                click.echo(
-                    f'[{table.__module__}] Created table \'{table.__table_name__}\'')
-
-    async def execute(self, query: str, *args, **kwargs):
-        return await self._pool.execute(query, *args, **kwargs)
-
-    async def fetch(self, query: str, *args, **kwargs):
-        return await self._pool.fetch(query, *args, **kwargs)
-
-    async def fetch_row(self, query: str, *args, **kwargs):
-        return await self._pool.fetchrow(query, *args, **kwargs)
-
-    @classmethod
-    async def from_dsn(cls, uri: str, *, loop: asyncio.AbstractEventLoop = None):
-        loop = loop or asyncio.get_event_loop()
-        pool = await cls.create_pool(uri, loop=loop)
-        return cls(pool)
-
-    @classmethod
-    async def create_pool(cls, uri: str, *, loop: asyncio.AbstractEventLoop):
-        def _encode_jsonb(value):
-            return json.dumps(value)
-
-        def _decode_jsonb(value):
-            return json.loads(value)
-
-        async def init(conn: asyncpg.Connection):
-            await conn.set_type_codec('jsonb', schema='pg_catalog', encoder=_encode_jsonb, decoder=_decode_jsonb)
-
-        return await asyncpg.create_pool(uri, init=init, loop=loop)
-
-
 class SQLType:
-    python: typing.Any = None
-
     def to_sql(self) -> str:
         raise NotImplementedError()
 
-    def is_real_type(self) -> bool:
-        return True
+
+class Boolean(SQLType):
+    def to_sql(self):
+        return 'BOOLEAN'
 
 
-class String(SQLType):
-    python = str
+class Datetime(SQLType):
+    def __init__(self, *, timezone=False):
+        self.timezone = timezone
 
     def to_sql(self):
-        return 'TEXT'
+        if self.timezone:
+            return 'TIMESTAMP WITH TIME ZONE'
+        return 'TIMESTAMP'
 
 
 class Integer(SQLType):
-    python = int
-
-    def __init__(self, *, big: bool = False, small: bool = False,
-                 auto_increment: bool = False):
+    def __init__(self, *, big=False, small=False, auto_increment=False):
         self.big = big
         self.small = small
         self.auto_increment = auto_increment
 
         if big and small:
-            raise SchemaError(
-                'Integer column type cannot be both big and small')
-
-    def is_real_type(self):
-        return not self.auto_increment
+            raise SchemaError('Integer column type cannot be both big and small')
 
     def to_sql(self):
         if self.auto_increment:
@@ -134,46 +117,44 @@ class Integer(SQLType):
 
         if self.big:
             return 'BIGINT'
-
         if self.small:
             return 'SMALLINT'
-
         return 'INTEGER'
 
 
-class Datetime(SQLType):
-    python = datetime.datetime
+class String(SQLType):
+    def __init__(self, *, length=None, fixed=False):
+        if fixed and length is None:
+            raise SchemaError('Cannot have a fixed string with no length')
 
-    def __init__(self, *, timezone: bool = False):
-        self.timezone = timezone
+        self.length = length
+        self.fixed = fixed
 
     def to_sql(self):
-        if self.timezone:
-            return 'TIMESTAMP WITH TIME ZONE'
+        if self.length is None:
+            return 'TEXT'
 
-        return 'TIMESTAMP'
+        if self.fixed:
+            return f'CHAR({self.length})'
+        return f'VARCHAR({self.length})'
 
 
-class JSON(SQLType):
-    python = None
-
+class Json(SQLType):
     def to_sql(self):
         return 'JSONB'
 
 
 class ForeignKey(SQLType):
-    def __init__(self, table: str, column: str, *, sql_type: SQLType = None,
-                 on_delete: str = 'CASCADE', on_update: str = 'NO ACTION'):
-
+    def __init__(self, table, column, *, sql_type=None, on_delete='CASCADE', on_update='NO ACTION'):
         if not table or not isinstance(table, str):
-            raise SchemaError('missing table to reference (must be string)')
+            raise SchemaError('Missing table to reference (must be string)')
 
         valid_actions = (
             'NO ACTION',
             'RESTRICT',
             'CASCADE',
             'SET NULL',
-            'SET DEFAULT',
+            'SET DEFAULT'
         )
 
         on_delete = on_delete.upper()
@@ -190,59 +171,33 @@ class ForeignKey(SQLType):
         self.on_update = on_update
         self.on_delete = on_delete
 
-        if sql_type is None:
+        if not sql_type:
             sql_type = Integer
 
-        if inspect.isclass(sql_type):
+        if isinstance(sql_type, type):
             sql_type = sql_type()
 
         if not isinstance(sql_type, SQLType):
-            raise TypeError('Cannot have non-SQLType derived sql_type')
-
-        if not sql_type.is_real_type():
-            raise SchemaError('sql_type must be a "real" type')
+            raise TypeError('Column type must be an instance of SQLType')
 
         self.sql_type = sql_type.to_sql()
 
-    def is_real_type(self):
-        return False
-
     def to_sql(self):
-        fmt = '{0.sql_type} REFERENCES {0.table} ({0.column})' \
-              ' ON DELETE {0.on_delete} ON UPDATE {0.on_update}'
+        fmt = '{0.sql_type} REFERENCES {0.table} ({0.column}) ' \
+              'ON DELETE {0.on_delete} ON UPDATE {0.on_update}'
         return fmt.format(self)
 
 
-class Array(SQLType):
-    python = list
-
-    def __init__(self, sql_type: SQLType):
-        if inspect.isclass(sql_type):
-            sql_type = sql_type()
-
-        if not isinstance(sql_type, SQLType):
-            raise TypeError('Cannot have non-SQLType derived sql_type')
-
-        self.sql_type = sql_type.to_sql()
-
-    def to_sql(self):
-        return f'{self.sql_type} ARRAY'
-
-
 class Column:
-    __slots__ = (
-        'column_type', 'index', 'primary_key', 'nullable',
-        'default', 'unique', 'name', 'index_name'
-    )
-
-    def __init__(self, column_type: SQLType, *, index: bool = False, primary_key: bool = False,
-                 nullable: bool = False, unique: bool = False, default: typing.Any = None, name: str = None):
-
-        if inspect.isclass(column_type):
+    def __init__(self, column_type, *, index=False, primary_key=False, nullable=False, unique=False, default=None, name=None):
+        if isinstance(column_type, type):
             column_type = column_type()
 
         if not isinstance(column_type, SQLType):
-            raise TypeError('Cannot have a non-SQLType derived column_type')
+            raise TypeError('Column type must be an instance of SQLType')
+
+        if sum(map(bool, (unique, primary_key, default is not None))) > 1:
+            raise SchemaError("'unique', 'primary_key' and 'default' are mutually exclusive")
 
         self.column_type = column_type
         self.index = index
@@ -251,14 +206,13 @@ class Column:
         self.unique = unique
         self.default = default
         self.name = name
+
+        # Para ser preenchido depois.
         self.index_name = None
 
-        if sum(map(bool, (unique, primary_key, default is not None))) > 1:
-            raise SchemaError(
-                '\'unique\', \'primary_key\' and \'default\' are mutually exclusive')
-
-    def _create_table(self) -> str:
+    def to_sql(self) -> str:
         builder = []
+
         builder.append(self.name)
         builder.append(self.column_type.to_sql())
 
@@ -266,9 +220,8 @@ class Column:
         if default is not None:
             builder.append('DEFAULT')
 
-            if isinstance(default, str) and isinstance(
-                    self.column_type, String):
-                builder.append('\'%s\'' % default)
+            if isinstance(default, str) and isinstance(self.column_type, String):
+                builder.append("'%s'" % default)
             elif isinstance(default, bool):
                 builder.append(str(default).upper())
             else:
@@ -283,6 +236,8 @@ class Column:
 
 
 class PrimaryKeyColumn(Column):
+    '''Atalho para uma coluna SERIAL PRIMARY KEY.'''
+
     def __init__(self):
         super().__init__(Integer(auto_increment=True), primary_key=True)
 
@@ -302,7 +257,7 @@ class TableMeta(type):
             if not isinstance(value, Column):
                 continue
 
-            if value.name is None:
+            if not value.name:
                 value.name = elem
 
             if value.index:
@@ -319,17 +274,37 @@ class TableMeta(type):
 
 class Table(metaclass=TableMeta):
     @classmethod
-    async def create(cls, pool: asyncpg.pool.Pool, *, verbose: bool = False):
-        '''Cria o banco de dados.'''
+    async def create(cls, pool: asyncpg.Pool, *, verbose: bool = False):
+        '''Cria uma tabela no banco de dados.
+
+        Parameters
+        ----------
+        pool: :class:`asyncpg.Pool`
+            O pool de conexão do PostgreSQL.
+        verbose: Optional[:class:`bool`]
+            Se a criação da tabela deve ser "barulhenta". Por padrão é `False`.
+        '''
         sql = cls.create_table(exists_ok=True)
+
         if verbose:
-            print(sql)
+            print(DIM + sql + RESET)
 
         await pool.execute(sql)
 
     @classmethod
     def create_table(cls, *, exists_ok: bool = True) -> str:
-        '''Gera uma query CREATE TABLE.'''
+        '''Gera uma query SQL do tipo `CREATE TABLE`.
+
+        Parameters
+        ----------
+        exists_ok: Optional[:class:`str`]
+            Se deve ignorar caso a tabela já exista. Por padrão é `True`.
+
+        Returns
+        -------
+        :class:`str`
+            A query SQL formatada.
+        '''
         statements = []
         builder = ['CREATE TABLE']
 
@@ -342,24 +317,21 @@ class Table(metaclass=TableMeta):
         primary_keys = []
 
         for column in cls.columns:
-            column_creations.append(column._create_table())
+            column_creations.append(column.to_sql())
 
             if column.primary_key:
                 primary_keys.append(column.name)
 
         if primary_keys:
-            column_creations.append(
-                'PRIMARY KEY (%s)' %
-                ', '.join(primary_keys))
+            column_creations.append('PRIMARY KEY (%s)' % ', '.join(primary_keys))
 
         builder.append('(%s)' % ', '.join(column_creations))
         statements.append(' '.join(builder) + ';')
 
         for column in cls.columns:
             if column.index:
-                fmt = 'CREATE INDEX IF NOT EXISTS {1.index_name} ON {0} ({1.name});'.format(
-                    cls.__table_name__, column)
-                statements.append(fmt)
+                fmt = 'CREATE INDEX IF NOT EXISTS {1.index_name} ON {0} ({1.name});'
+                statements.append(fmt.format(cls.__table_name__, column))
 
         return '\n'.join(statements)
 

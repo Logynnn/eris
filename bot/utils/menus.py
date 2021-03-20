@@ -21,174 +21,192 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
+'''
+This Source Code Form is subject to the
+terms of the Mozilla Public License, v.
+2.0. If a copy of the MPL was not
+distributed with this file, You can
+obtain one at
+http://mozilla.org/MPL/2.0/.
+'''
 
-import functools
-from typing import List, Mapping, Callable
+import enum
+from typing import Any
 
 import discord
-from discord.ext import commands, menus
+from discord.ext import menus
+
+from .context import ErisContext
 
 
-class _MenuBase(menus.Menu):
+DOUBLE_LEFT_EMOJI  = '<:DoubleLeft:821145728684261406>'
+DOUBLE_RIGHT_EMOJI = '<:DoubleRight:821145747743178752>'
+LEFT_EMOJI         = '<:Left:821145765212454913>'
+RIGHT_EMOJI        = '<:Right:821145810128863252>'
+STOP_EMOJI         = '<:Stop:821145785193725962>'
+
+
+# Esse menu foi rebaseado para que ele remova
+# a reação depois de um botão ser pressionado.
+class MenuBase(menus.Menu):
     async def update(self, payload: discord.RawReactionActionEvent):
         if self._can_remove_reactions:
-            if payload.event_type == 'REACTION_ADD':
-                await self.message.remove_reaction(payload.emoji, payload.member)
-            else:
+            if payload.event_type != 'REACTION_ADD':
                 return
 
+            await self.message.remove_reaction(payload.emoji, payload.member)
         await super().update(payload)
 
 
-class _MenuPagesBase(menus.MenuPages):
+# Esse menu foi rebaseado para que ele remova
+# a reação depois de um botão ser pressionado.
+class MenuPagesBase(menus.MenuPages, inherit_buttons=False):
     async def update(self, payload: discord.RawReactionActionEvent):
         if self._can_remove_reactions:
-            if payload.event_type == 'REACTION_ADD':
-                await self.message.remove_reaction(payload.emoji, payload.member)
-            else:
+            if payload.event_type != 'REACTION_ADD':
                 return
 
+            await self.message.remove_reaction(payload.emoji, payload.member)
         await super().update(payload)
 
+    async def send_initial_message(self, ctx: ErisContext, channel: discord.TextChannel):
+        page = await self._source.get_page(0)
+        kwargs = await self._get_kwargs_from_page(page)
+        return await ctx.reply(**kwargs)
 
-class ConfirmMenu(_MenuBase):
-    def __init__(self, content: str):
-        super().__init__(delete_message_after=True)
-        self.content = content
-        self.result = None
+    async def show_page(self, page_number: int):
+        page = await self._source.get_page(page_number)
+        self.current_page = page_number
+        kwargs = await self._get_kwargs_from_page(page)
 
-    async def send_initial_message(self, ctx: commands.Context, _):
-        return await ctx.reply(self.content)
+        mentions = discord.AllowedMentions(replied_user=False)
+        await self.message.edit(**kwargs, allowed_mentions=mentions)
 
-    @menus.button('✅')
-    async def on_confirm(self, payload: discord.RawReactionActionEvent):
-        self.result = True
+    def _skip_double_arrows(self) -> bool:
+        max_pages = self._source.get_max_pages()
+        if max_pages is None:
+            return True
+        return max_pages <= 2
+
+    @menus.button(DOUBLE_LEFT_EMOJI, position=menus.First(0), skip_if=_skip_double_arrows)
+    async def go_to_first_page(self, payload: discord.RawReactionActionEvent):
+        '''Vai para a primeira página.'''
+        await self.show_page(0)
+
+    @menus.button(LEFT_EMOJI, position=menus.First(0))
+    async def go_to_previous_page(self, payload: discord.RawReactionActionEvent):
+        '''Vai para a página anterior.'''
+        await self.show_checked_page(self.current_page - 1)
+    
+    @menus.button(STOP_EMOJI)
+    async def stop_pages(self, payload: discord.RawReactionActionEvent):
+        '''Para a sessão de paginamento.'''
         self.stop()
 
-    @menus.button('❌')
-    async def on_deny(self, payload: discord.RawReactionActionEvent):
-        self.result = False
-        self.stop()
+    @menus.button(RIGHT_EMOJI, position=menus.Last(0))
+    async def go_to_next_page(self, payload: discord.RawReactionActionEvent):
+        '''Vai para a próxima página.'''
+        await self.show_checked_page(self.current_page + 1)
 
-    async def prompt(self, ctx: commands.Context):
-        await self.start(ctx, wait=True)
-
-        if self.result is None:
-            await ctx.reply('Você demorou muito para responder.')
-
-        return self.result
+    @menus.button(DOUBLE_RIGHT_EMOJI, position=menus.Last(1), skip_if=_skip_double_arrows)
+    async def go_to_last_page(self, payload: discord.RawReactionActionEvent):
+        '''Vai para a última página.'''
+        await self.show_page(self._source.get_max_pages() - 1)
 
 
-class PunishmentMenu(_MenuBase):
-    def __init__(self):
-        super().__init__(delete_message_after=True)
+class StringPageSource(menus.ListPageSource):
+    '''Formata um menu baseado em um `list[:class:`str`]`.'''
+    async def format_page(self, menu: MenuBase, entries: list[str]):
+        footer = f'Página {menu.current_page + 1}/{self.get_max_pages()}'
 
-        self.reason = None
-        self._reasons = [
-            'Violação das Diretrizes do Discord',
-            'Má convivência',
-            'Conteúdo NSFW',
-            'Flood/Spam',
-            'Divulgação',
-            'Desrespeito aos tópicos',
-            'Poluição sonora'
-        ]
-
-        for i in range(1, len(self._reasons) + 1):
-            emoji = f'{i}\N{variation selector-16}\N{combining enclosing keycap}'
-            button = menus.Button(emoji, self.on_reason)
-
-            self.add_button(button)
-
-    async def send_initial_message(self, ctx: commands.Context, channel: discord.TextChannel):
-        reasons = []
-        for i, reason in enumerate(self._reasons, start=1):
-            emoji = f'{i}\N{variation selector-16}\N{combining enclosing keycap}'
-            reasons.append(f'{emoji} - {reason}')
-
-        return await ctx.reply('\n'.join(reasons))
-
-    async def on_reason(self, payload: discord.RawReactionActionEvent):
-        index = int(str(payload.emoji)[0]) - 1
-        self.reason = self._reasons[index]
-        self.stop()
-
-    async def prompt(self, ctx: commands.Context):
-        await self.start(ctx, wait=True)
-        return self.reason
+        embed = menu.ctx.get_embed('\n'.join(entries))
+        embed.set_footer(text=footer)
+        return embed
 
 
-class ListPaginator(menus.ListPageSource):
-    def __init__(self, data, per_page: int = 8):
-        super().__init__(data, per_page=per_page)
+class FieldPageSource(menus.ListPageSource):
+    '''Formata um menu baseado em um `list[dict[:class:`str`, :class:`str`]]`.'''
+    async def format_page(self, menu: MenuBase, entries: list[dict[str, str]]):
+        footer = f'Página {menu.current_page + 1}/{self.get_max_pages()}'
 
-    async def format_page(self, menu: _MenuBase, entries):
-        footer = {
-            'text': f'Página {menu.current_page + 1}/{self.get_max_pages()}'}
-        return menu.ctx.get_embed('\n'.join(entries), footer=footer)
+        embed = menu.ctx.get_embed()
+        embed.set_footer(text=footer)
 
-
-class FieldPaginator(menus.ListPageSource):
-    def __init__(self, data, per_page: int = 8):
-        super().__init__(data, per_page=per_page)
-
-    async def format_page(self, menu: _MenuBase, entries):
-        footer = {
-            'text': f'Página {menu.current_page + 1}/{self.get_max_pages()}'}
-        return menu.ctx.get_embed(fields=entries, footer=footer)
-
-
-class Menu(_MenuPagesBase):
-    def __init__(self, data, *, paginator_type: int = 0, per_page: int = 8):
-        _types = [ListPaginator, FieldPaginator]
-        super().__init__(
-            _types[paginator_type](
-                data,
-                per_page=per_page),
-            delete_message_after=True)
-
-
-class HelpPaginator(menus.ListPageSource):
-    def __init__(self, commands: Mapping[commands.Cog, List[commands.Command]]):
-        entries = sorted(commands.keys(), key=lambda c: c.qualified_name)
-        self.commands = commands
-
-        super().__init__(entries, per_page=6)
-
-    def get_opening_note(self, ctx: commands.Context) -> str:
-        command = f'{ctx.prefix}{ctx.invoked_with}'
-        return 'Use `{0} [comando]` para mais informações sobre um comando.\n' \
-               'Use `{0} [categoria]` para mais informações sobre uma categoria.'.format(command)
-
-    async def format_page(self, menu: _MenuBase, cogs: List[commands.Cog]):
-        ctx = menu.ctx
-
-        embed = discord.Embed(description=self.get_opening_note(ctx), color=ctx.bot.color)
-        embed.set_author(name=str(ctx.author), icon_url=ctx.author.avatar_url)
-        embed.set_footer(text=f'Página {menu.current_page + 1}/{self.get_max_pages()}')
-
-        fields = []
-        for cog in cogs:
-            commands = [f'`{cmd.qualified_name}`' for cmd in self.commands.get(cog)]
-            embed.add_field(name=cog.qualified_name, value=', '.join(commands), inline=False)
+        for field in entries:
+            embed.add_field(**field)
 
         return embed
 
 
-class HelpMenu(_MenuPagesBase):
-    def __init__(self, data):
-        super().__init__(HelpPaginator(data), clear_reactions_after=True)
+class SourceType(enum.Enum):
+    STRING = StringPageSource
+    FIELD  = FieldPageSource
 
 
-def confirm(message: str):
-    def wrapper(func: Callable):
-        @functools.wraps(func)
-        async def wrapped(self, ctx: commands.Context, *args, **kwargs):
-            result = await ctx.prompt(message)
-            
-            if not result:
-                return
+class ErisMenuPages(MenuPagesBase):
+    '''Cria um paginador interativo.
 
-            return await func(self, ctx, *args, **kwargs)
-        return wrapped
-    return wrapper
+    Parameters
+    ----------
+    entries: list[:class:`typing.Any`]
+        As entradas para serem paginadas.
+    source: :class:`SourceType`
+        O tipo de paginador a ser usado, por padrão é `SourceType.STRING`.
+    per_page: :class:`int`
+        Quantos elementos devem aparecer por página, por padrão é  `8`.
+
+    Raises
+    ------
+    MenuError
+        Caso a entrada não seja uma instância de `SourceType`.
+    '''
+    def __init__(self, entries: list[Any], *, source: SourceType = SourceType.STRING, per_page: int = 8):
+        if not isinstance(source, SourceType):
+            raise menus.MenuError('Source must be a subclass of SourceType')
+
+        source = source.value(entries, per_page=per_page)
+        super().__init__(source, clear_reactions_after=True)
+
+    # async def send_initial_message(self, ctx: ErisContext, channel: discord.TextChannel):
+    #     page = await self._source.get_page(0)
+    #     kwargs = await self._get_kwargs_from_page(page)
+    #     return await ctx.reply(**kwargs)
+
+    # async def show_page(self, page_number: int):
+    #     page = await self._source.get_page(page_number)
+    #     self.current_page = page_number
+    #     kwargs = await self._get_kwargs_from_page(page)
+
+    #     mentions = discord.AllowedMentions(replied_user=False)
+    #     await self.message.edit(**kwargs, allowed_mentions=mentions)
+
+    # def _skip_double_arrows(self) -> bool:
+    #     max_pages = self._source.get_max_pages()
+    #     if max_pages is None:
+    #         return True
+    #     return max_pages <= 2
+
+    # @menus.button(DOUBLE_LEFT_EMOJI, position=menus.First(0), skip_if=_skip_double_arrows)
+    # async def go_to_first_page(self, payload: discord.RawReactionActionEvent):
+    #     '''Vai para a primeira página.'''
+    #     await self.show_page(0)
+
+    # @menus.button(LEFT_EMOJI, position=menus.First(0))
+    # async def go_to_previous_page(self, payload: discord.RawReactionActionEvent):
+    #     '''Vai para a página anterior.'''
+    #     await self.show_checked_page(self.current_page - 1)
+    
+    # @menus.button(STOP_EMOJI)
+    # async def stop_pages(self, payload: discord.RawReactionActionEvent):
+    #     '''Para a sessão de paginamento.'''
+    #     self.stop()
+
+    # @menus.button(RIGHT_EMOJI, position=menus.Last(0))
+    # async def go_to_next_page(self, payload: discord.RawReactionActionEvent):
+    #     '''Vai para a próxima página.'''
+    #     await self.show_checked_page(self.current_page + 1)
+
+    # @menus.button(DOUBLE_RIGHT_EMOJI, position=menus.Last(1), skip_if=_skip_double_arrows)
+    # async def go_to_last_page(self, payload: discord.RawReactionActionEvent):
+    #     '''Vai para a última página.'''
+    #     await self.show_page(self._source.get_max_pages() - 1)

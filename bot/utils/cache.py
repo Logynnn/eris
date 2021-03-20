@@ -49,5 +49,9 @@ async def create_cache(address: str, *, loop: AbstractEventLoop) -> Redis:
     -------
     :class:`Redis`
         Uma instância de uma sessão do Redis.
-    '''    
-    return await create_redis_pool(address=address, loop=loop, encoding='utf-8')
+    '''
+    pool = await create_redis_pool(address=address, loop=loop, encoding='utf-8')
+    # Antes de retornar a pool, quero remover tudo do cache
+    # para manter as coisas mais limpas e organizadas.
+    await pool.flushall()
+    return pool

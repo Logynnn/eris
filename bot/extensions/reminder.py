@@ -30,27 +30,29 @@ obtain one at
 http://mozilla.org/MPL/2.0/.
 '''
 
-import datetime
-import typing
 import asyncio
+import typing
+import datetime
 
-import asyncpg
 import discord
+import asyncpg
 import humanize
 from discord.ext import commands
 
+from eris import Eris
 from utils import database
+from utils.context import ErisContext
+from utils.time import UserFriendlyTime
+from utils.menus import ErisMenuPages, SourceType
 
 
 class Reminders(database.Table):
     id = database.PrimaryKeyColumn()
 
     expires = database.Column(database.Datetime, index=True)
-    created = database.Column(
-        database.Datetime,
-        default='now() at time zone \'utc\'')
+    created = database.Column(database.Datetime, default="NOW() AT TIME ZONE 'utc'")
     event = database.Column(database.String)
-    extra = database.Column(database.JSON, default="'{}'::jsonb")
+    extra = database.Column(database.Json, default="'{}'::jsonb")
 
 
 class Timer:
@@ -79,20 +81,21 @@ class Timer:
 
         return cls(record=pseudo)
 
-    @property
-    def human_time(self) -> str:
-        return humanize.precisedelta(
-            self.expires - self.created_at, format='%0.0f')
-
     def __eq__(self, other: typing.Any):
         return isinstance(other, type(self)) and other.id == self.id
 
     def __repr__(self):
         return f'<Timer created={self.created_at} expires={self.expires} event={self.event!r}>'
 
+    @property
+    def delta(self) -> str:
+        return humanize.precisedelta(self.created_at - self.expires, format='%0.0f')
 
-class Reminder(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+
+class Reminder(commands.Cog, name='Lembretes'):
+    '''Comandos relacionados e lembretes e timers.'''
+
+    def __init__(self, bot: Eris):
         self.bot = bot
 
         self._have_data = asyncio.Event(loop=bot.loop)
@@ -116,14 +119,15 @@ class Reminder(commands.Cog):
             self._task = self.bot.loop.create_task(self.dispatch_timers())
 
     async def call_timer(self, timer: Timer):
-        query = 'DELETE FROM reminders WHERE id = $1'
-        await self.bot.manager.execute(query, timer.id)
+        sql = 'DELETE FROM reminders WHERE id = $1;'
+        await self.bot.pool.execute(sql, timer.id)
 
         self.bot.dispatch(f'{timer.event}_complete', timer)
 
     async def wait_for_active_timers(self, *, days: int = 7):
         timer = await self.get_active_timer(days=days)
-        if timer is not None:
+
+        if timer:
             self._have_data.set()
             return timer
 
@@ -134,39 +138,67 @@ class Reminder(commands.Cog):
         return await self.get_active_timer(days=days)
 
     async def get_active_timer(self, *, days: int = 7) -> Timer:
-        query = 'SELECT * FROM reminders WHERE expires < (CURRENT_DATE + $1::interval) ORDER BY expires LIMIT 1'
-        record = await self.bot.manager.fetch_row(query, datetime.timedelta(days=days))
-        return Timer(record=record) if record else None
+        sql = '''
+            SELECT * FROM reminders
+            WHERE expires < (CURRENT_DATE + $1::interval)
+            ORDER BY expires
+            LIMIT 1;
+        '''
+        record = await self.bot.pool.fetchrow(sql, datetime.timedelta(days=days))
 
+        return Timer(record=record) if record else None
+        
     async def short_timer_optimisation(self, seconds: int, timer: Timer):
         await asyncio.sleep(seconds)
         self.bot.dispatch(f'{timer.event}_complete', timer)
 
-    async def create_timer(self, *args, **kwargs):
+    async def create_timer(self, *args, **kwargs) -> Timer:
+        '''Cria um timer.
+
+        Parameters
+        ----------
+        when: :class:`datetime.datetime`
+            Quando o timer deve ativar.
+        event: :class:`str`
+            O nome do evento para ativar.
+            Vai ser transformado em um evento `on_{event}_complete`
+        \*args
+            Os argumentos para passar no evento.
+        \*\*kwargs
+            As keywords para passar no evento.
+        created: :class:`datetime.datetime`
+            Uma keyword especial que diz o tempo da criação do timer.
+            Deve fazer os timedeltas mais consistentes.
+
+        Note
+        ------
+        Os argumentos e as keywords devem ser objetos JSON válidos.
+
+        Returns
+        -------
+        :class:`Timer`
+            O timer a ser usado.
+        '''        
         when, event, *args = args
         now = kwargs.pop('created', datetime.datetime.utcnow())
 
-        timer = Timer.temporary(
-            event=event,
-            args=args,
-            kwargs=kwargs,
-            expires=when,
-            created=now)
+        when = when.replace(microsecond=0)
+        now = now.replace(microsecond=0)
+
+        timer = Timer.temporary(expires=when, created=now, event=event, args=args, kwargs=kwargs)
+        
         delta = (when - now).total_seconds()
         if delta <= 60:
-            self.bot.loop.create_task(
-                self.short_timer_optimisation(
-                    delta, timer))
+            self.bot.loop.create_task(self.short_timer_optimisation(delta, timer))
             return timer
-
-        query = '''
+            
+        sql = '''
             INSERT INTO reminders (event, extra, expires, created)
             VALUES ($1, $2::jsonb, $3, $4)
-            RETURNING id
+            RETURNING id;
         '''
-
-        fetch = await self.bot.manager.fetch_row(query, event, {'args': args, 'kwargs': kwargs}, when, now)
-        timer.id = fetch[0]
+        record = await self.bot.pool.fetchrow(sql, event, {'args': args, 'kwargs': kwargs}, when, now)
+        timer.id = record[0]
 
         if delta <= (86400 * 40):
             self._have_data.set()
@@ -177,6 +209,73 @@ class Reminder(commands.Cog):
 
         return timer
 
+    @commands.group(invoke_without_command=True, aliases=['timer', 'remind'])
+    async def reminder(self, ctx: ErisContext, *, when: UserFriendlyTime(commands.clean_content, default='...')):
+        '''
+        Te lembra de alguma coisa depois de uma certa quantida de tempo.
+        '''
+        args = (ctx.author.id, ctx.channel.id, when.arg)
+        kwargs = {'created': ctx.message.created_at, 'message_id': ctx.message.id}
 
-def setup(bot: commands.Bot):
+        timer = await self.create_timer(when.datetime, 'reminder', *args, **kwargs)
+        await ctx.reply(f'Certo, em {timer.delta}: **{when.arg}**.')
+
+    @reminder.command(name='list', ignore_extra=False)
+    async def reminder_list(self, ctx: ErisContext):
+        '''
+        Mostra seus timers ativos.
+        '''
+        sql = '''
+            SELECT id, expires, extra #>> '{args,2}' FROM reminders
+            WHERE event = 'reminder'
+            AND extra #>> '{args,0}'= $1
+            ORDER BY expires
+            LIMIT 10;
+         '''
+        fetch = await ctx.pool.fetch(sql, str(ctx.author.id))
+
+        if len(fetch) == 0:
+            return await ctx.reply('Você não possui nenhum lembrete ativo.')
+
+        fields = []
+
+        for reminder_id, expires, message in fetch:
+            now = datetime.datetime.utcnow()
+            delta = humanize.precisedelta(expires - now.replace(microsecond=0), format='%0.0f')
+
+            field = {'name': f'[{reminder_id}] Em {delta}', 'value': message, 'inline': False}
+            fields.append(field)
+
+        menu = ErisMenuPages(fields, source=SourceType.FIELD)
+        await menu.start(ctx, wait=True)
+
+    @commands.Cog.listener()
+    async def on_reminder_complete(self, timer: Timer):
+        # Só quero que os timers respondam caso o bot esteja pronto.
+        await self.bot.wait_until_ready()
+
+        author_id, channel_id, content = timer.args
+
+        author = self.bot.cosmic.get_member(author_id)
+        channel = self.bot.cosmic.get_channel(channel_id)
+
+        if not channel:
+            return
+
+        # Uma maneira hardcoded de obter o link da mensagem.
+        message_id = timer.kwargs.get('message_id')
+        message_url = f'https://discord.com/channels/{self.bot.cosmic.id}/{channel.id}/{message_id}'
+
+        messages = [
+            f'Há {timer.delta}: **{content}**.',
+            f'**Clique [aqui]({message_url}) para ver a mensagem.**'
+        ]
+
+        embed = discord.Embed(description='\n\n'.join(messages), colour=0x2f3136)
+        embed.set_author(name=author.display_name, icon_url=author.avatar_url)
+
+        await channel.send(author.mention, embed=embed)
+
+
+def setup(bot: Eris):
     bot.add_cog(Reminder(bot))

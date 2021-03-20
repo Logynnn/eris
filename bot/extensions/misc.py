@@ -21,30 +21,51 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
+'''
+This Source Code Form is subject to the
+terms of the Mozilla Public License, v.
+2.0. If a copy of the MPL was not
+distributed with this file, You can
+obtain one at
+http://mozilla.org/MPL/2.0/.
+'''
 
 from discord.ext import commands
 
+from eris import Eris
+from utils.context import ErisContext
+
+
+NOTIFICATIONS_ROLE_ID = 815605411318202368
+
 
 class Misc(commands.Cog, name='Miscelânea'):
-    def __init__(self, bot: commands.Bot):
+    '''Comandos de miscelânea.'''
+
+    def __init__(self, bot: Eris):
         self.bot = bot
 
+    @commands.Cog.listener()
+    async def on_first_launch(self):
+        self.notifications_role = self.bot.cosmic.get_role(NOTIFICATIONS_ROLE_ID)
+
     @commands.command()
-    async def notifications(self, ctx: commands.Context):
-        role = ctx.bot.notifications_role
-
-        if role in ctx.author.roles:
-            func = ctx.author.remove_roles
-            term = 'removeu'
+    async def notifications(self, ctx: ErisContext):
+        '''
+        Recebe (ou remove) o cargo de notificações.
+        '''
+        if self.notifications_role not in ctx.author.roles:
+            method = ctx.author.add_roles
+            word = 'recebeu'
         else:
-            func = ctx.author.add_roles
-            term = 'adicionou'
+            method = ctx.author.remove_roles
+            word = 'removeu'
 
-        reason = f'{term.title()} o cargo de notificações'
-        await func(role, reason=reason)
+        reason = f'{word.title()} o cargo de notificações'
+        await method(self.notifications_role, reason=reason)
 
-        await ctx.reply(f'Você {term} seu cargo de {role.mention}.')            
+        await ctx.reply(f'Você {word} o cargo de {self.notifications_role.mention}.')
 
 
-def setup(bot: commands.Bot):
+def setup(bot: Eris):
     bot.add_cog(Misc(bot))

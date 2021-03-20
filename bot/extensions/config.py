@@ -32,6 +32,7 @@ http://mozilla.org/MPL/2.0/.
 
 import logging
 
+import discord
 from discord.ext import commands
 
 from eris import Eris
@@ -55,7 +56,7 @@ class Config(commands.Cog, name='Configurações'):
         self.no_prefix = 'Go wild, você escolheu não usar prefixo.'
 
     @commands.Cog.listener()
-    async def on_load(self):
+    async def on_bot_load(self):
         # Carrega os prefixos personalizados no cache.
         sql = 'SELECT user_id, prefix FROM configurations;'
         fetch = await self.bot.pool.fetch(sql)
@@ -66,7 +67,16 @@ class Config(commands.Cog, name='Configurações'):
 
             await self.bot.cache.set(f'config/user/{user_id}/prefix', prefix)
 
-    @commands.group(invoke_without_command=True)
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        # Caso alguém saia do servidor, removemos
+        # ela do banco de dados e do cache.
+        sql = 'DELETE FROM configurations WHERE user_id = $1;'
+        await self.bot.pool.execute(sql, member.id)
+
+        await self.bot.cache.delete(f'config/user/{member.id}/prefix')
+
+    @commands.group(invoke_without_command=True, ignore_extra=False)
     async def prefix(self, ctx: ErisContext):
         '''
         Verifica qual é o prefixo personalizado do usuário.
@@ -89,15 +99,21 @@ class Config(commands.Cog, name='Configurações'):
         '''
         Define um prefixo personalizado para o usuário.
         '''
-        
-        # Se o prefixo for o mesmo do padrão, então
-        # nós removemos o prefixo da pessoa do cache
-        # e do banco de dados.
+        if len(prefix) > 6:
+            return await ctx.reply('Este prefixo é muito longo.')
+
         if prefix == ctx.bot.default_prefix:
+            # Se o prefixo for o mesmo do padrão, então
+            # nós removemos o prefixo da pessoa do cache
+            # e do banco de dados.
             sql = 'DELETE FROM configurations WHERE user_id = $1;'
             await ctx.pool.execute(sql, ctx.author.id)
 
             await ctx.cache.delete(f'config/user/{ctx.author.id}/prefix')
+        elif prefix == 'eris ':
+            # Este já é um prefixo global então falamos que o usuário
+            # não pode usar este prefixo.
+            return await ctx.reply('Este já é um prefixo global.')
         else:
             sql = 'UPDATE configurations SET prefix = $2 WHERE user_id = $1;'
             await ctx.pool.execute(sql, ctx.author.id, prefix)

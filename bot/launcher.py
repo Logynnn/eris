@@ -31,7 +31,6 @@ http://mozilla.org/MPL/2.0/.
 '''
 
 import colorama
-import click
 import asyncio
 import importlib
 import traceback
@@ -39,6 +38,9 @@ import logging
 import contextlib
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+
+import click
+import humanize
 
 import config
 from eris import Eris
@@ -102,6 +104,9 @@ def setup_logging():
 
 
 def run_bot():
+    # Ativamos o i18n em português do módulo `humanize`.
+    humanize.activate('pt_BR')
+
     bot = Eris()
     bot.run(config.token)
 
@@ -123,7 +128,7 @@ def db():
 @db.command(short_help='inicializa o banco de dados', options_metavar='[options]')
 @click.option('-q', '--quiet', help='output menos detalhado', is_flag=True)
 def init(quiet: bool):
-    '''Faz  a criação das tabelas do PostgreSQL automaticamente.'''
+    '''Faz a criação das tabelas do PostgreSQL automaticamente.'''
     loop = asyncio.get_event_loop()
     run = loop.run_until_complete
 

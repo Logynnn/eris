@@ -21,130 +21,129 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
+'''
+This Source Code Form is subject to the
+terms of the Mozilla Public License, v.
+2.0. If a copy of the MPL was not
+distributed with this file, You can
+obtain one at
+http://mozilla.org/MPL/2.0/.
+'''
 
-import typing
-import re
-import json
+import enum
+import asyncio
 from typing import Optional
 
 import discord
-import humanize
 from discord.ext import commands, flags
-from jishaku.codeblocks import codeblock_converter
+from discord.ext.menus import Button
 
-from utils import database
-from utils.menus import PunishmentMenu
-from utils.embed import Embed
+from eris import Eris
+from utils.context import ErisContext
+from utils.menus import MenuBase
 from utils.time import FutureTime
-from .reminder import Timer
 
 
-class PunishmentImage(database.Table, table_name='punishment_images'):
-    user_id = database.Column(database.Integer(big=True), primary_key=True)
-    url = database.Column(database.String())
+PUNISHMENTS_CHANNEL_ID = 798013309617176587
+
+
+class ReasonMenu(MenuBase):
+    '''Menu para selecionar o motivo da punição.'''
+
+    def __init__(self):
+        super().__init__(delete_message_after=True)
+
+        # Por padrão, será "Má convivência".
+        # Caso o autor não responda o menu, será usado
+        # este valor padrão.
+        self.reason = 'Má convivência'
+
+        # Todos os motivos para banir um usuário.
+        self.all_reasons = [
+            'Violação das Diretrizes do Discord',
+            'Má convivência',
+            'Conteúdo NSFW',
+            'Flood/Spam',
+            'Divulgação',
+            'Desrespeito aos tópicos',
+            'Poluição sonora'
+        ]
+
+        for i in range(1, len(self.all_reasons) + 1):
+            emoji = f'{i}\N{variation selector-16}\N{combining enclosing keycap}'
+            self.add_button(Button(emoji, self.on_reason))
+
+    async def send_initial_message(self, ctx: ErisContext, channel: discord.TextChannel):
+        reasons = []
+
+        for i, reason in enumerate(self.all_reasons, start=1):
+            emoji = f'{i}\N{variation selector-16}\N{combining enclosing keycap}'
+            reasons.append(f'{emoji} - {reason}')
+
+        return await ctx.reply('\n'.join(reasons))
+
+    async def on_reason(self, payload: discord.RawReactionActionEvent):
+        self.reason = self.all_reasons[int(str(payload.emoji)[0]) - 1]
+        self.stop()
+
+    async def prompt(self, ctx: ErisContext):
+        await self.start(ctx, wait=True)
+        return self.reason
+
+
+class PunishmentType(enum.Enum):
+    BANNED = 'banido'
+    KICKED = 'expulso'
+    MUTED  = 'silenciado'
 
 
 class Mod(commands.Cog, name='Moderação'):
-    def __init__(self, bot: commands.Bot):
+    '''Comandos relacionados a moderação do servidor.'''
+
+    def __init__(self, bot: Eris):
         self.bot = bot
 
-    async def cog_check(self, ctx: commands.Context):
+    def cog_check(self, ctx: ErisContext):
+        # Somente staffers usarão os comandos deste cog.
         return ctx.bot.staff_role in ctx.author.roles
 
     @commands.Cog.listener()
-    async def on_first_ready(self):
-        self.cosmic = self.bot.cosmic
-        
-        self.staff_role = self.bot.staff_role
-        self.mute_role = self.bot.mute_role
-        self.log_channel = self.bot.log_channel
+    async def on_first_launch(self):
+        self.log = self.bot.cosmic.get_channel(PUNISHMENTS_CHANNEL_ID)
 
-    async def get_punishment_image(self, member: discord.Member):
-        query = 'SELECT url FROM punishment_images WHERE user_id = $1'
-        fetch = await self.bot.manager.fetch_row(query, member.id)
-
-        if not fetch:
-            return None
-
-        return fetch[0]
-
-    @commands.group()
-    async def config(self, ctx: commands.Context):
-        pass
-
-    @config.command()
-    async def image(self, ctx: commands.Context, url: str):
-        match = self.bot._image_url_regex.match(url)
-        if not match or not match.group(0):
-            return await ctx.reply('Este é um link inválido.')
-
-        query = '''
-            INSERT INTO punishment_images (user_id, url)
-            VALUES ($1, $2)
-            ON CONFLICT (user_id)
-            DO UPDATE SET url = $2
-        '''
-        await self.bot.manager.execute(query, ctx.author.id, url)
-
-        await ctx.reply('Você mudou sua imagem de banimento com sucesso.')
-
-    @commands.command(aliases=['b'])
-    async def ban(self, ctx: commands.Context, *, member: discord.Member):
-        image = await self.get_punishment_image(ctx.author)
+    # TODO: Hackban.
+    # TODO: Banir mais de uma pessoa de uma vez.
+    @flags.command(aliases=['b'])
+    @flags.add_flag('--quiet', '-q', action='store_true')
+    async def ban(self, ctx: ErisContext, member: discord.Member, **flags):
+        quiet = flags['quiet']
 
         try:
             await member.ban(reason=f'Ação realizada por {ctx.author} (ID: {ctx.author.id})')
         except discord.Forbidden:
             await ctx.reply('Não foi possível banir este usuário.')
         else:
-            await ctx.reply(title=f'{member} foi banido com sucesso', image=image)
-            self.bot.dispatch('moderation_command', 'ban', ctx, member)
+            await ctx.reply(f'Eita, `{member}` foi banido do servidor.')
 
-    @commands.command(aliases=['k'])
-    async def kick(self, ctx: commands.Context, *, member: discord.Member):
-        image = await self.get_punishment_image(ctx.author)
+            if not quiet:
+                self.bot.dispatch('punishment', ctx, member, PunishmentType.BANNED)
+
+    @flags.command(aliases=['k'])
+    @flags.add_flag('--quiet', '-q', action='store_true')
+    async def kick(self, ctx: ErisContext, member: discord.Member, **flags):
+        quiet = flags['quiet']
 
         try:
             await member.kick(reason=f'Ação realizada por {ctx.author} (ID: {ctx.author.id})')
         except discord.Forbidden:
-            await ctx.reply('Não foi possível expulsar este usuário.')
+            await ctx.reply('Não foi possível banir este usuário.')
         else:
-            await ctx.reply(title=f'{member} foi expulso com sucesso', image=image)
-            self.bot.dispatch('moderation_command', 'kick', ctx, member)
+            await ctx.reply(f'Eita, {member} foi expulso do servidor.')
 
-    @commands.command(aliases=['m'])
-    async def mute(self, ctx: commands.Context, member: discord.Member, *, when: FutureTime):
-        reminder = ctx.bot.get_cog('Reminder')
-        if not reminder:
-            return await ctx.reply('Serviço indisponível, tente novamente mais tarde.')
+            if not quiet:
+                self.bot.dispatch('punishment', ctx, member, PunishmentType.KICKED)
 
-        if self.staff_role in member.roles:
-            return await ctx.reply('Não foi possível silenciar este usuário.')
-
-        await member.add_roles(self.mute_role, reason=f'Ação realizada por {ctx.author} (ID: {ctx.author.id}')
-        timer = await reminder.create_timer(
-            when.datetime,
-            'mute',
-            ctx.author.id,
-            member.id,
-            created=ctx.message.created_at
-        )
-
-        image = await self.get_punishment_image(ctx.author)
-        delta = humanize.precisedelta(
-            when.datetime -
-            ctx.message.created_at,
-            format='%0.0f')
-
-        await ctx.reply(title=f'{member} foi silenciado por {delta}', image=image)
-        self.bot.dispatch(
-            'moderation_command',
-            'mute',
-            ctx,
-            member,
-            duration=delta)
-
-    @flags.command(aliases=['purge'])
+    @flags.command(aliases=['c'])
     @flags.add_flag('--user', type=discord.User, nargs='+')
     @flags.add_flag('--contains', type=str, nargs='+')
     @flags.add_flag('--starts', type=str, nargs='+')
@@ -156,7 +155,7 @@ class Mod(commands.Cog, name='Moderação'):
     @flags.add_flag('--reactions', action='store_const', const=lambda m: len(m.reactions))
     @flags.add_flag('--after', type=int)
     @flags.add_flag('--before', type=int)
-    async def clear(self, ctx: commands.Context, amount: Optional[int] = 100, **flags):
+    async def clear(self, ctx: ErisContext, amount: Optional[int] = 100, **flags):
         predicates = []
         amount = max(0, min(2000, amount))
 
@@ -205,54 +204,32 @@ class Mod(commands.Cog, name='Moderação'):
             return all(pred(m) for pred in predicates)
 
         deleted = await ctx.channel.purge(limit=amount, before=before, after=after, check=predicate)
-        await ctx.reply(f'Removi `{len(deleted)}` mensagens com sucesso.', delete_after=5)
+        message = await ctx.reply(f'Deletei `{len(deleted)}` mensagens deste canal.')
+
+        # Esperar 5 segundos antes de deletar as mensagens
+        await asyncio.sleep(5)
+        await ctx.channel.delete_messages([deleted, message])
 
     @commands.Cog.listener()
-    async def on_mute_complete(self, timer: Timer):
-        moderator_id, member_id = timer.args
-        await self.bot.wait_until_ready()
-
-        member = self.cosmic.get_member(member_id)
-        moderator = self.cosmic.get_member(moderator_id)
-
-        if not member:
-            return
-
-        reason = f'Removendo silenciamento realizado por {moderator}'
-
-        try:
-            await member.remove_roles(self.mute_role, reason=reason)
-        except discord.HTTPException:
-            pass
-
-    @commands.Cog.listener()
-    async def on_moderation_command(self, name: str, ctx: commands.Context, member: discord.Member, **kwargs):
-        terms = {
-            'ban': 'banido',
-            'kick': 'expulso',
-            'mute': 'silenciado'
-        }
-
-        menu = PunishmentMenu()
+    async def on_punishment(self, ctx: ErisContext, member: discord.Member, punishment_type: PunishmentType, **kwargs):
+        menu = ReasonMenu()
         reason = await menu.prompt(ctx)
 
-        term = terms[name]
-        duration = kwargs.get('duration', None)
+        word = punishment_type.value
+        duration = kwargs.get('duration')
 
-        embed = Embed(title=f'Usuário {term}', color=ctx.bot.color)
+        embed = discord.Embed(title=f'Usuário {word}', colour=0x2f3136)
 
         embed.set_thumbnail(url=member.avatar_url)
-        embed.set_author(name=str(ctx.author), icon_url=ctx.author.avatar_url)
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
 
         embed.add_field(name='Usuário', value=str(member), inline=False)
         embed.add_field(name='ID', value=f'`{member.id}`', inline=False)
         embed.add_field(name='Motivo', value=reason, inline=False)
 
-        if duration:
-            embed.add_field(name='Duração', value=duration, inline=False)
-
-        await self.log_channel.send(embed=embed)
+        await self.log.send(embed=embed)
 
 
-def setup(bot: commands.Bot):
+
+def setup(bot: Eris):
     bot.add_cog(Mod(bot))

@@ -1,11 +1,11 @@
-discord.py[voice]
+discord.py
 asyncpg
 click
 git+https://github.com/Rapptz/discord-ext-menus
 git+https://github.com/webkaiyo/parsedatetime
-unidecode
 python-dateutil
 humanize
 jishaku
 discord-flags
 aioredis
+colorama

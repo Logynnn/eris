@@ -58,7 +58,7 @@ class Economy(commands.Cog, name='Economia'):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_load(self):
+    async def on_bot_load(self):
         # Carrega os dados dos usuários no cache.
         sql = 'SELECT user_id, coins FROM currency;'
         fetch = await self.bot.pool.fetch(sql)
@@ -87,18 +87,45 @@ class Economy(commands.Cog, name='Economia'):
         await ctx.cache.setnx(f'economy/user/{member.id}/coins', 0)
 
     async def add_coins(self, user_id: int, coins: int):
+        '''Adiciona uma quantidade de tens no banco de um usuário.
+
+        Parameters
+        ----------
+        user_id: :class:`int`
+            O ID do usuário.
+        coins: :class:`int`
+            A quantidade de tens a ser dada.
+        '''
         sql = 'UPDATE currency SET coins = coins + $2 WHERE user_id = $1;'
         await self.bot.pool.execute(sql, user_id, coins)
 
         await self.bot.cache.incrby(f'economy/user/{user_id}/coins', coins)
 
     async def remove_coins(self, user_id: int, coins: int):
+        '''Remove uma quantidade de tens do banco de um usuário.
+
+        Parameters
+        ----------
+        user_id: :class:`int`
+            O ID do usuário.
+        coins: :class:`int`
+            A quantidade de tens a ser removida.
+        '''
         sql = 'UPDATE currency SET coins = coins - $2 WHERE user_id = $1;'
         await self.bot.pool.execute(sql, user_id, coins)
 
         await self.bot.cache.decrby(f'economy/user/{user_id}/coins', coins)
 
     async def set_coins(self, user_id: int, coins: int):
+        '''Define uma quantidade de tens no banco de um usuário.
+
+        Parameters
+        ----------
+        user_id: :class:`int`
+            O ID do usuário.
+        coins: :class:`int`
+            A quantidade de tens a ser definida.
+        '''
         sql = 'UPDATE currency SET coins = $2 WHERE user_id = $1;'
         await self.bot.pool.execute(sql, user_id, coins)
 
@@ -160,7 +187,7 @@ class Economy(commands.Cog, name='Economia'):
     @checks.is_staffer()
     async def bank_set(self, ctx: ErisContext, member: Optional[Member] = None, amount: int = None):
         '''
-        Altere o valor do saldo de um usuário.
+        Altera o valor do saldo de um usuário.
         '''
         if amount is None or amount < 0:
             return await ctx.reply('Diga um valor válido para eu definir.')

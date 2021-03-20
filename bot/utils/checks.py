@@ -21,42 +21,23 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
-
-import functools
-from typing import Callable
+'''
+This Source Code Form is subject to the
+terms of the Mozilla Public License, v.
+2.0. If a copy of the MPL was not
+distributed with this file, You can
+obtain one at
+http://mozilla.org/MPL/2.0/.
+'''
 
 from discord.ext import commands
 
-from .constants import PREMIUM_ROLES
-
-
-def is_premium():
-    def predicate(ctx: commands.Context):
-        return any(role in ctx.bot.premium_roles for role in ctx.author.roles)
-
-    return commands.check(predicate)
+from .context import ErisContext
 
 
 def is_staffer():
-    def predicate(ctx: commands.Context):
+    '''Verifica se o usuário é staffer do servidor.'''
+    def predicate(ctx: ErisContext):
         return ctx.bot.staff_role in ctx.author.roles
 
     return commands.check(predicate)
-
-
-def is_guild_owner():
-    def wrapper(func: Callable):
-        @functools.wraps(func)
-        async def wrapped(self, ctx: commands.Context, *args, **kwargs):
-            guild = await self.get_guild(ctx, ctx.author.id)
-
-            if not guild:
-                return await ctx.reply('Você não possui uma guilda.')
-
-            if guild.owner != ctx.author:
-                return await ctx.reply('Você não é o dono desta guilda.')
-
-            ctx.member_guild = guild
-            return await func(self, ctx, *args, **kwargs)
-        return wrapped
-    return wrapper

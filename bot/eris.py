@@ -138,6 +138,11 @@ class Eris(commands.Bot):
             print(YELLOW + f'[{__name__}] Online com {len(self.users)} usuários.' + RESET)
 
     async def on_message(self, message: discord.Message):
+        # Só quero que o bot responda quando ele estiver pronto,
+        # já que os comandos precisam do cache atualizado.
+        if not self.is_ready():
+            return
+
         # Verifico se o autor da mensagem é uma instância
         # de `Member`. Assim consigo evitar mensagens de
         # webhooks.
