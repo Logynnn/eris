@@ -208,7 +208,7 @@ class Mod(commands.Cog, name='Moderação'):
 
         # Esperar 5 segundos antes de deletar as mensagens
         await asyncio.sleep(5)
-        await ctx.channel.delete_messages([deleted, message])
+        await ctx.channel.delete_messages([*deleted, message])
 
     @commands.Cog.listener()
     async def on_punishment(self, ctx: ErisContext, member: discord.Member, punishment_type: PunishmentType, **kwargs):
